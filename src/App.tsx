@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { soundEngine } from './audio/soundEngine';
 import { getDailyCase, getStoryChapters } from './content/storyCases';
-import { CaseDefinition, DifficultyStage, GrammarFocus, PlayerProgress } from './core/types';
+import { CampusLessonRange, CaseDefinition, DifficultyStage, GrammarFocus, PlayerProgress } from './core/types';
 import { generateCase } from './generator/caseGenerator';
 import { recordGrammarOutcome, loadProgress, resetProgress, saveProgress } from './services/storage';
 import { CaseWorkspace } from './ui/components/CaseWorkspace';
@@ -10,6 +10,7 @@ import { LegalModal, LegalTab } from './ui/components/LegalModal';
 import { OfflineIndicator } from './ui/components/OfflineIndicator';
 import { SettingsModal } from './ui/components/SettingsModal';
 import { ArchiveView, CasesHubView, PracticeView } from './ui/components/Views';
+import { GlossaryView } from './ui/components/GlossaryView';
 
 export default function App() {
   const [progress, setProgress] = useState<PlayerProgress>(() => loadProgress());
@@ -71,18 +72,69 @@ export default function App() {
     }
   };
 
+  const campusLessonRange: CampusLessonRange = {
+    from: progress.settings.campusLessonFrom ?? 0,
+    to: progress.settings.campusLessonTo ?? 40,
+  };
+
+  const activeCampusRange: CampusLessonRange | undefined =
+    progress.settings.vocabularySource === 'campus' ? campusLessonRange : undefined;
+
+  const handleChangeCampusRange = (range: CampusLessonRange) => {
+    setProgress((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        campusLessonFrom: range.from,
+        campusLessonTo: range.to,
+      },
+    }));
+  };
+
   const handleStartRandomStage = (stage: DifficultyStage) => {
     soundEngine.unlockAndMaybeStartMusic();
     const seed = `free-${stage}-${Date.now()}`;
-    setActiveCase(generateCase({ seed, stage }));
+    setActiveCase(generateCase({ seed, stage, campusLessonRange: activeCampusRange }));
     setActiveView('play');
   };
 
   const handleStartFocusedPractice = (focus: GrammarFocus, stage: DifficultyStage) => {
     soundEngine.unlockAndMaybeStartMusic();
     const seed = `practice-${focus}-${Date.now()}`;
-    setActiveCase(generateCase({ seed, stage, grammarBias: focus }));
+    setActiveCase(
+      generateCase({ seed, stage, grammarBias: focus, campusLessonRange: activeCampusRange })
+    );
     setActiveView('play');
+  };
+
+  const handleRecordCampusResult = (cardId: string, correct: boolean) => {
+    setProgress((prev) => {
+      const curr = prev.campusStats ?? { masteredIds: [], wrongIds: [], practicedCount: 0 };
+      const mastered = new Set(curr.masteredIds);
+      const wrong = new Set(curr.wrongIds);
+      if (correct) {
+        mastered.add(cardId);
+        wrong.delete(cardId);
+      } else {
+        wrong.add(cardId);
+        mastered.delete(cardId);
+      }
+      return {
+        ...prev,
+        campusStats: {
+          masteredIds: [...mastered],
+          wrongIds: [...wrong],
+          practicedCount: curr.practicedCount + 1,
+        },
+      };
+    });
+  };
+
+  const handleResetCampusProgress = () => {
+    setProgress((prev) => ({
+      ...prev,
+      campusStats: { masteredIds: [], wrongIds: [], practicedCount: 0 },
+    }));
   };
 
   const handleCaseSolved = (result: {
@@ -177,6 +229,17 @@ export default function App() {
         ) : activeView === 'practice' ? (
           <PracticeView
             progress={progress}
+            campusLessonRange={campusLessonRange}
+            onChangeCampusLessonRange={handleChangeCampusRange}
+            onStartFocusedPractice={handleStartFocusedPractice}
+            onRecordCampusResult={handleRecordCampusResult}
+            onResetCampusProgress={handleResetCampusProgress}
+          />
+        ) : activeView === 'glossary' ? (
+          <GlossaryView
+            progress={progress}
+            onNavigateToCases={() => setActiveView('cases')}
+            onStartStage={handleStartRandomStage}
             onStartFocusedPractice={handleStartFocusedPractice}
           />
         ) : activeView === 'archive' ? (
@@ -192,6 +255,13 @@ export default function App() {
             onStartCase={handleStartStoryCase}
             onStartRandomStage={handleStartRandomStage}
             onStartDaily={() => handleNavigate('daily')}
+            onChangeVocabularySource={(vocabularySource) =>
+              setProgress((prev) => ({
+                ...prev,
+                settings: { ...prev.settings, vocabularySource },
+              }))
+            }
+            onChangeCampusLessonRange={handleChangeCampusRange}
           />
         )}
       </main>

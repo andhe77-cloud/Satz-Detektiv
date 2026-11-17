@@ -83,12 +83,20 @@ export function createDefaultProgress(): PlayerProgress {
     totalStars: 0,
     unlockedBadges: [],
     grammarStats: emptyGrammar(),
+    campusStats: {
+      masteredIds: [],
+      wrongIds: [],
+      practicedCount: 0,
+    },
     settings: {
       theme: prefersDark ? 'dark' : 'light',
       reducedMotion: prefersReduced,
       musicVolume: 0.25,
       sfxVolume: 0.55,
       musicEnabled: false,
+      vocabularySource: 'standard',
+      campusLessonFrom: 0,
+      campusLessonTo: 40,
     },
   };
 }
@@ -100,6 +108,22 @@ export function loadProgress(): PlayerProgress {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return fallback;
     const parsed = JSON.parse(raw) as Partial<PlayerProgress>;
+    const mergedSettings = {
+      ...fallback.settings,
+      ...(parsed.settings ?? {}),
+    };
+    const validFromStops = new Set([0, 10, 20, 30, 40, 50, 60]);
+    const validToStops = new Set([10, 20, 30, 40, 50, 60, 68]);
+    if (!validFromStops.has(mergedSettings.campusLessonFrom)) {
+      mergedSettings.campusLessonFrom = 0;
+    }
+    if (!validToStops.has(mergedSettings.campusLessonTo)) {
+      mergedSettings.campusLessonTo = 40;
+    }
+    if (mergedSettings.campusLessonFrom >= mergedSettings.campusLessonTo) {
+      mergedSettings.campusLessonFrom = 0;
+      mergedSettings.campusLessonTo = 40;
+    }
     return {
       ...fallback,
       ...parsed,
@@ -107,10 +131,11 @@ export function loadProgress(): PlayerProgress {
         ...fallback.grammarStats,
         ...(parsed.grammarStats ?? {}),
       },
-      settings: {
-        ...fallback.settings,
-        ...(parsed.settings ?? {}),
+      campusStats: {
+        ...fallback.campusStats,
+        ...(parsed.campusStats ?? {}),
       },
+      settings: mergedSettings,
     };
   } catch {
     return fallback;

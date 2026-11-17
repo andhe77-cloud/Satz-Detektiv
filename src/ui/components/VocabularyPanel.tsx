@@ -1,7 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { CaseDefinition } from '../../core/types';
-import { defaultLexicon } from '../../latin/inflector';
+import { combinedLexicon } from '../../latin/campusLexicon';
 
 export const VocabularyPanel: React.FC<{
   caseData: CaseDefinition;
@@ -12,7 +12,7 @@ export const VocabularyPanel: React.FC<{
 
   const addNoun = (id: string) => {
     try {
-      const n = defaultLexicon.getNoun(id);
+      const n = combinedLexicon.getNoun(id);
       if (n.category === 'person') return;
       const key = `${n.lemma}, ${n.genitive} (${n.gender}.)`;
       if (!entriesMap.has(key)) {
@@ -25,7 +25,7 @@ export const VocabularyPanel: React.FC<{
 
   const addVerb = (id: string) => {
     try {
-      const v = defaultLexicon.getVerb(id);
+      const v = combinedLexicon.getVerb(id);
       const key = `${v.infinitive} (${v.present3Sg}, ${v.perfect3Sg})`;
       if (!entriesMap.has(key)) {
         entriesMap.set(key, { lemma: key, pos: 'Verb', meaningDe: v.meaningDeInf });

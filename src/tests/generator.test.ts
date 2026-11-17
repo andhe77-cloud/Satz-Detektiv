@@ -1,16 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { getDailyCase, getStoryChapters } from '../content/storyCases';
 import { buildSearchSpace, solveCase } from '../core/solver';
-import { DifficultyStage } from '../core/types';
+import { CampusLessonRange, DifficultyStage } from '../core/types';
 import { generateCase } from '../generator/caseGenerator';
+import {
+  CAMPUS_CARDS,
+  buildCampusScenarios,
+  combinedLexicon,
+  getCampusLexicon,
+} from '../latin/campusLexicon';
 import { importNounsFromCsv, exportNounsToCsv } from '../latin/csvImporter';
 import {
   defaultLexicon,
   detectNounAmbiguities,
   inflectNounSingular,
 } from '../latin/inflector';
+import { GRAMMAR_GLOSSARY, getUnlockedGlossaryCount, isGlossaryEntryUnlocked } from '../latin/grammarGlossary';
 import rawLexicon from '../latin/lexicon.json';
 import { validateLexicon } from '../latin/schema';
+import { createDefaultProgress, recordGrammarOutcome } from '../services/storage';
 
 describe('Latin Lexicon & Inflector', () => {
   it('validates the built-in JSON lexicon schema', () => {
@@ -114,3 +122,103 @@ describe('Procedural Puzzle Generator Property Tests', () => {
     }
   }, 20000);
 });
+
+describe('Campus C1&2 Integration', () => {
+  it('loads all extracted Campus vocabulary cards and declinable nouns', () => {
+    expect(CAMPUS_CARDS.length).toBeGreaterThan(1000);
+    const nouns = CAMPUS_CARDS.filter((c) => c.nounMeta);
+    expect(nouns.length).toBeGreaterThan(200);
+    for (const n of nouns) {
+      const acc = inflectNounSingular(
+        {
+          id: n.id,
+          lemma: n.nounMeta!.lemma,
+          genitive: n.nounMeta!.genitive,
+          stem: n.nounMeta!.stem,
+          declension: n.nounMeta!.declension,
+          gender: n.nounMeta!.gender,
+          meaningDe: n.back,
+          category: 'item',
+          lesson: n.maxLesson,
+        },
+        'acc'
+      );
+      expect(acc.length).toBeGreaterThan(1);
+    }
+  });
+
+  it('generates uniquely solvable Campus cases across lesson ranges (from-to) and stages 1-4', () => {
+    const ranges: CampusLessonRange[] = [
+      { from: 0, to: 10 },
+      { from: 0, to: 40 },
+      { from: 20, to: 40 },
+      { from: 40, to: 68 },
+      { from: 50, to: 60 },
+      { from: 0, to: 68 },
+    ];
+    const stages: DifficultyStage[] = [1, 2, 3, 4];
+
+    for (const range of ranges) {
+      const lex = getCampusLexicon(range);
+      const scenarios = buildCampusScenarios(range);
+      expect(scenarios.length).toBeGreaterThanOrEqual(3);
+
+      for (const stage of stages) {
+        const c = generateCase({
+          seed: `campus-test-${range.from}-${range.to}-s${stage}`,
+          stage,
+          campusLessonRange: range,
+        });
+        expect(c.campusLessonRange).toEqual(range);
+        expect(lex.getNoun(c.scenario.targetNounId)).toBeDefined();
+        expect(combinedLexicon.getVerb(c.scenario.crimeVerbId)).toBeDefined();
+
+        const space = buildSearchSpace({
+          suspects: c.witnessIds,
+          items: c.candidateItems,
+          requireGiver: Boolean(c.solution.giver),
+          locations: c.candidateLocations,
+        });
+        const solve = solveCase({
+          statements: c.statements.map((s) => ({ speakerId: s.speakerId, ast: s.ast })),
+          truthRule: c.truthRule,
+          searchSpace: space,
+        });
+        expect(solve.solutions).toHaveLength(1);
+        expect(solve.solutions[0]).toEqual(c.solution);
+      }
+    }
+  });
+});
+
+describe('Grammar Glossary & Unlock Progression', () => {
+  it('covers every GrammarFocus tag and unlocks entries as story chapters are solved', () => {
+    const allFocuses = [
+      'nominative',
+      'accusative',
+      'negation',
+      'perfect',
+      'dative',
+      'conjunction',
+      'ablative',
+    ] as const;
+
+    expect(GRAMMAR_GLOSSARY.map((e) => e.focus).sort()).toEqual([...allFocuses].sort());
+
+    let progress = createDefaultProgress();
+    expect(getUnlockedGlossaryCount(progress)).toBe(0);
+
+    const chapters = getStoryChapters();
+    for (const ch of chapters) {
+      for (const c of ch.cases) {
+        progress = recordGrammarOutcome(progress, c.difficultyMetrics.grammarTags, false);
+      }
+    }
+
+    for (const focus of allFocuses) {
+      expect(isGlossaryEntryUnlocked(progress, focus)).toBe(true);
+    }
+    expect(getUnlockedGlossaryCount(progress)).toBe(allFocuses.length);
+  });
+});
+

@@ -1,7 +1,7 @@
 import React from 'react';
-import { BookMarked, CalendarDays, Dumbbell, FolderSearch, SlidersHorizontal } from 'lucide-react';
+import { BookMarked, BookOpen, CalendarDays, Dumbbell, FolderSearch, SlidersHorizontal } from 'lucide-react';
 
-export type AppView = 'cases' | 'play' | 'daily' | 'practice' | 'archive';
+export type AppView = 'cases' | 'play' | 'daily' | 'practice' | 'glossary' | 'archive';
 
 interface HeaderProps {
   activeView: AppView;
@@ -14,6 +14,7 @@ export const Header: React.FC<HeaderProps> = ({ activeView, onNavigate, onOpenSe
     { id: 'cases', label: 'Fälle' },
     { id: 'daily', label: 'Tagesfall' },
     { id: 'practice', label: 'Üben' },
+    { id: 'glossary', label: 'Glossar' },
     { id: 'archive', label: 'Akte' },
   ];
 
@@ -75,13 +76,14 @@ export const MobileBottomNav: React.FC<{
     { id: 'cases', label: 'Fälle', Icon: FolderSearch },
     { id: 'daily', label: 'Tagesfall', Icon: CalendarDays },
     { id: 'practice', label: 'Üben', Icon: Dumbbell },
+    { id: 'glossary', label: 'Glossar', Icon: BookOpen },
     { id: 'archive', label: 'Akte', Icon: BookMarked },
   ];
 
   return (
     <nav
       aria-label="Mobile Navigation"
-      className="md:hidden fixed bottom-0 left-0 right-0 z-30 h-14 border-t border-[#DED4C3] dark:border-[#3A312A] bg-[#F7F3EA]/95 dark:bg-[#161311]/95 backdrop-blur-md grid grid-cols-4 items-center"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-30 h-14 border-t border-[#DED4C3] dark:border-[#3A312A] bg-[#F7F3EA]/95 dark:bg-[#161311]/95 backdrop-blur-md grid grid-cols-5 items-center"
     >
       {items.map(({ id, label, Icon }) => {
         const isActive = activeView === id || (activeView === 'play' && id === 'cases');

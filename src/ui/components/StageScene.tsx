@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BookOpen, Check, HelpCircle, Languages, Sparkles, X } from 'lucide-react';
-import { CaseDefinition, ScenarioProp, WordToken } from '../../core/types';
+import { CaseDefinition, WordToken } from '../../core/types';
 import { WitnessMark, WitnessFigureSvg, RoomBackdropSvg, CHARACTERS } from './Illustrations';
 
 interface StageSceneProps {
@@ -35,7 +35,6 @@ export const StageScene: React.FC<StageSceneProps> = ({
   vocabOpen,
 }) => {
   const [inspectedWord, setInspectedWord] = useState<WordToken | null>(null);
-  const [inspectedProp, setInspectedProp] = useState<ScenarioProp | null>(null);
 
   const activeStmt = caseData.statements[selectedWitness] ?? caseData.statements[0];
   const activeChar = CHARACTERS[activeStmt.speakerId] ?? CHARACTERS.marcus;
@@ -52,24 +51,6 @@ export const StageScene: React.FC<StageSceneProps> = ({
       {/* Painted Room Stage */}
       <div className="relative h-[340px] sm:h-[370px] w-full rounded-2xl overflow-hidden border border-[#C9B99F] dark:border-[#493D32] shadow-md bg-[#E6D5B8] dark:bg-[#231D17]">
         <RoomBackdropSvg room={caseData.scenario.room} />
-
-        {/* Clickable Evidence Props in Room */}
-        {caseData.scenario.props.map((prop) => (
-          <button
-            key={prop.id}
-            type="button"
-            onClick={() => {
-              setInspectedProp((prev) => (prev?.id === prop.id ? null : prop));
-              setInspectedWord(null);
-            }}
-            style={{ left: `${prop.xPercent}%`, top: `${prop.yPercent}%` }}
-            title={`Beweisstück untersuchen: ${prop.labelDe}`}
-            aria-label={`Beweisstück untersuchen: ${prop.labelDe}`}
-            className="absolute -translate-x-1/2 -translate-y-1/2 z-10 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-full bg-[#FFFDF7]/90 dark:bg-[#241C16]/90 border border-[#C89342] text-[#9B2C2C] dark:text-[#D99341] shadow-sm hover:scale-110 transition-transform cursor-pointer focus-visible:outline-2 focus-visible:outline-[#9B2C2C]"
-          >
-            <span className="text-xs font-bold px-2 whitespace-nowrap">{prop.labelDe}</span>
-          </button>
-        ))}
 
         {/* Speech Bubble */}
         <div className="relative z-20 mx-3 mt-3">
@@ -107,7 +88,6 @@ export const StageScene: React.FC<StageSceneProps> = ({
                     type="button"
                     onClick={() => {
                       setInspectedWord(isSelectedWord ? null : tok);
-                      setInspectedProp(null);
                     }}
                     className={`rounded-md px-1 py-0.5 transition-colors cursor-pointer underline decoration-dotted decoration-[#B47B2B]/60 underline-offset-4 focus-visible:outline-2 focus-visible:outline-[#9B2C2C] ${
                       isSelectedWord
@@ -145,7 +125,6 @@ export const StageScene: React.FC<StageSceneProps> = ({
                 onClick={() => {
                   onSelectWitness(idx);
                   setInspectedWord(null);
-                  setInspectedProp(null);
                 }}
                 aria-pressed={isSelected}
                 aria-label={`${ch.name} (${ch.roleDe}) befragen`}
@@ -190,7 +169,7 @@ export const StageScene: React.FC<StageSceneProps> = ({
         </div>
       </div>
 
-      {/* Contextual Inspector: Word Tooltip / Prop Observation / Translation */}
+      {/* Contextual Inspector: Word Tooltip / Translation */}
       {inspectedWord && (
         <div
           role="status"
@@ -218,28 +197,6 @@ export const StageScene: React.FC<StageSceneProps> = ({
             type="button"
             onClick={() => setInspectedWord(null)}
             aria-label="Worterklärung schließen"
-            className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-[#6A5A4C] dark:text-[#B9AA98] hover:bg-black/5 cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      {inspectedProp && (
-        <div
-          role="status"
-          className="rounded-xl border border-[#DED4C3] dark:border-[#3A312A] bg-[#FFFDF8] dark:bg-[#221D19] p-3.5 text-sm shadow-sm flex items-start justify-between gap-3"
-        >
-          <div>
-            <div className="text-xs font-semibold text-[#9B2C2C] dark:text-[#E06C65]">
-              Spur am Tatort · <em>{inspectedProp.latinClue}</em>
-            </div>
-            <p className="mt-0.5 text-[#241C16] dark:text-[#F2ECE1]">{inspectedProp.commentDe}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setInspectedProp(null)}
-            aria-label="Hinweis schließen"
             className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-[#6A5A4C] dark:text-[#B9AA98] hover:bg-black/5 cursor-pointer"
           >
             <X className="w-4 h-4" />

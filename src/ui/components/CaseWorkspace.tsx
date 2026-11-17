@@ -4,7 +4,8 @@ import { soundEngine } from '../../audio/soundEngine';
 import { solveCase, buildSearchSpace } from '../../core/solver';
 import { TRUTH_RULES } from '../../core/truthRules';
 import { CaseDefinition, GrammarFocus } from '../../core/types';
-import { defaultLexicon, detectNounAmbiguities, inflectNounSingular } from '../../latin/inflector';
+import { combinedLexicon } from '../../latin/campusLexicon';
+import { detectNounAmbiguities, inflectNounSingular } from '../../latin/inflector';
 import { DeductionGrid, GridMark } from './DeductionGrid';
 import { CHARACTERS, CorneliusAvatarSvg, WitnessMark } from './Illustrations';
 import { SolutionBuilder } from './SolutionBuilder';
@@ -159,13 +160,13 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({
   const diagnoseWordMismatch = (placedWord: string, slotIndex: number): string => {
     const slot = caseData.solutionSpec.slots[slotIndex];
     // Check if placedWord is a different case form of the expected word or another lexicon noun
-    for (const noun of defaultLexicon.nouns.values()) {
+    for (const noun of combinedLexicon.nouns.values()) {
       for (const c of ['nom', 'acc', 'dat', 'abl'] as const) {
         if (inflectNounSingular(noun, c) === placedWord) {
           const detectedCases = detectNounAmbiguities(noun, c);
           if (placedWord !== slot.expectedWord) {
             // Check if the stem matches the expected word (pure case-ending mistake!)
-            const expectedNoun = [...defaultLexicon.nouns.values()].find(
+            const expectedNoun = [...combinedLexicon.nouns.values()].find(
               (n) => inflectNounSingular(n, slot.expectedRole === 'accusative' ? 'acc' : slot.expectedRole === 'ablative' ? 'abl' : 'nom') === slot.expectedWord
             );
             if (expectedNoun && expectedNoun.id === noun.id) {
@@ -256,6 +257,14 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({
             <span className="font-semibold text-[#9B2C2C] dark:text-[#E06C65]">
               Stufe {caseData.stage}
             </span>
+            {caseData.campusLessonRange && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="font-semibold text-[#241C16] dark:text-[#F2ECE1]">
+                  Campus Lektion {caseData.campusLessonRange.from === 0 ? 1 : caseData.campusLessonRange.from + 1}–{caseData.campusLessonRange.to}
+                </span>
+              </>
+            )}
             <span aria-hidden="true">·</span>
             <span>Wahrheitsregel: <strong className="text-[#241C16] dark:text-[#F2ECE1]">{ruleInfo.shortRuleDe}</strong></span>
           </div>

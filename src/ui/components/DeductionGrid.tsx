@@ -1,7 +1,7 @@
 import React from 'react';
 import { Check, X } from 'lucide-react';
 import { CaseDefinition } from '../../core/types';
-import { defaultLexicon } from '../../latin/inflector';
+import { combinedLexicon } from '../../latin/campusLexicon';
 import { CHARACTERS } from './Illustrations';
 
 export type GridMark = '' | 'x' | 'ok';
@@ -81,7 +81,7 @@ export const DeductionGrid: React.FC<DeductionGridProps> = ({
                 Verdächtige
               </th>
               {items.map((itemId) => {
-                const item = defaultLexicon.getNoun(itemId);
+                const item = combinedLexicon.getNoun(itemId);
                 return (
                   <th key={itemId} className="text-center font-semibold text-[#241C16] dark:text-[#F2ECE1] pb-1">
                     <div>{item.lemma}</div>
@@ -130,7 +130,7 @@ export const DeductionGrid: React.FC<DeductionGridProps> = ({
           </div>
           <div className="grid grid-cols-3 gap-2">
             {locations.map((locId) => {
-              const loc = defaultLexicon.getNoun(locId);
+              const loc = combinedLexicon.getNoun(locId);
               const key = `loc-${locId}`;
               const val = gridState[key] ?? '';
               return (

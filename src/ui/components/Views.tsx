@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { Award, CheckCircle2, Download, Play, RotateCcw, Shuffle, Star, Upload } from 'lucide-react';
+import { Award, CheckCircle2, Download, Play, RotateCcw, Shuffle, Star } from 'lucide-react';
 import { StoryChapter } from '../../content/storyCases';
-import { DifficultyStage, GrammarFocus, PlayerProgress } from '../../core/types';
-import { importNounsFromCsv, exportNounsToCsv } from '../../latin/csvImporter';
-import { defaultLexicon } from '../../latin/inflector';
+import { CampusLessonRange, DifficultyStage, GrammarFocus, PlayerProgress } from '../../core/types';
 import { getRecommendedPracticeFocus } from '../../services/spacedRepetition';
 import { BADGES, getCurrentRank } from '../../services/storage';
 import { ArchiveStatsDashboard } from './ArchiveStatsDashboard';
+import { CampusVocabTrainer } from './CampusVocabTrainer';
 import { CorneliusAvatarSvg } from './Illustrations';
+import { LessonRangeSlider } from './LessonRangeSlider';
 import { PWAInstallButton } from './PWAInstallButton';
 
 export const CasesHubView: React.FC<{
@@ -16,9 +16,25 @@ export const CasesHubView: React.FC<{
   onStartCase: (caseId: string) => void;
   onStartRandomStage: (stage: DifficultyStage) => void;
   onStartDaily: () => void;
-}> = ({ chapters, progress, onStartCase, onStartRandomStage, onStartDaily }) => {
+  onChangeVocabularySource: (source: 'standard' | 'campus') => void;
+  onChangeCampusLessonRange: (range: CampusLessonRange) => void;
+}> = ({
+  chapters,
+  progress,
+  onStartCase,
+  onStartRandomStage,
+  onStartDaily,
+  onChangeVocabularySource,
+  onChangeCampusLessonRange,
+}) => {
   const rank = getCurrentRank(progress.totalStars);
   const solvedCount = Object.keys(progress.solvedCaseIds).length;
+  const vocabSource = progress.settings.vocabularySource ?? 'standard';
+  const campusRange: CampusLessonRange = {
+    from: progress.settings.campusLessonFrom ?? 0,
+    to: progress.settings.campusLessonTo ?? 40,
+  };
+  const effectiveFrom = campusRange.from === 0 ? 1 : campusRange.from + 1;
 
   return (
     <div className="space-y-8">
@@ -69,6 +85,57 @@ export const CasesHubView: React.FC<{
           <p className="text-xs text-[#6A5A4C] dark:text-[#B9AA98]">
             Jeder Fall wird neu berechnet und auf genau eine Lösung geprüft.
           </p>
+        </div>
+
+        {/* Vocabulary Source & Campus Lesson Range Selector */}
+        <div className="rounded-2xl border border-[#DED4C3] dark:border-[#3A312A] bg-[#FFFDF8] dark:bg-[#221D19] p-3.5 sm:p-4 flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold text-[#241C16] dark:text-[#F2ECE1]">
+                Wortschatz für Zufallsfälle
+              </div>
+              <div className="text-xs text-[#6A5A4C] dark:text-[#B9AA98]">
+                {vocabSource === 'campus'
+                  ? `Aktiv: Campus C1&2 – Vokabeln aus Lektion ${effectiveFrom}–${campusRange.to}`
+                  : 'Aktiv: Basis-Detektivlexikon (27 Nomen, 10 Verben)'}
+              </div>
+            </div>
+
+            <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-[#EFE8DA] dark:bg-[#161311]">
+              <button
+                type="button"
+                onClick={() => onChangeVocabularySource('standard')}
+                className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  vocabSource === 'standard'
+                    ? 'bg-[#FFFDF8] dark:bg-[#2B241F] text-[#9B2C2C] dark:text-[#E06C65] shadow-sm'
+                    : 'text-[#4A3D33] dark:text-[#B9AA98]'
+                }`}
+              >
+                Basis-Lexikon
+              </button>
+              <button
+                type="button"
+                onClick={() => onChangeVocabularySource('campus')}
+                className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  vocabSource === 'campus'
+                    ? 'bg-[#FFFDF8] dark:bg-[#2B241F] text-[#9B2C2C] dark:text-[#E06C65] shadow-sm'
+                    : 'text-[#4A3D33] dark:text-[#B9AA98]'
+                }`}
+              >
+                Campus C1&2
+              </button>
+            </div>
+          </div>
+
+          {vocabSource === 'campus' && (
+            <div className="pt-3 border-t border-[#EFE8DA] dark:border-[#322A23]">
+              <LessonRangeSlider
+                value={campusRange}
+                onChange={onChangeCampusLessonRange}
+                label="Campus-Lektionsbereich (Von – Bis)"
+              />
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -170,8 +237,20 @@ export const CasesHubView: React.FC<{
 
 export const PracticeView: React.FC<{
   progress: PlayerProgress;
+  campusLessonRange: CampusLessonRange;
+  onChangeCampusLessonRange: (range: CampusLessonRange) => void;
   onStartFocusedPractice: (focus: GrammarFocus, stage: DifficultyStage) => void;
-}> = ({ progress, onStartFocusedPractice }) => {
+  onRecordCampusResult: (cardId: string, correct: boolean) => void;
+  onResetCampusProgress: () => void;
+}> = ({
+  progress,
+  campusLessonRange,
+  onChangeCampusLessonRange,
+  onStartFocusedPractice,
+  onRecordCampusResult,
+  onResetCampusProgress,
+}) => {
+  const [practiceTab, setPracticeTab] = useState<'grammar' | 'campus'>('grammar');
   const rec = getRecommendedPracticeFocus(progress);
 
   const areaItems: Array<{ focus: GrammarFocus; title: string; stage: DifficultyStage }> = [
@@ -186,68 +265,107 @@ export const PracticeView: React.FC<{
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#241C16] dark:text-[#F2ECE1]">
-          Gezieltes Grammatik-Training (Spaced Repetition)
-        </h1>
-        <p className="mt-1 text-sm text-[#4A3D33] dark:text-[#D5C9BA]">
-          Bereiche, in denen Fehler passieren, werden automatisch häufiger vorgeschlagen.
-        </p>
-      </div>
-
-      {/* Recommended Next Drill */}
-      <div className="rounded-2xl border border-[#C89342] bg-[#FFFDF8] dark:bg-[#221D19] p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <div className="text-xs font-bold text-[#9B2C2C] dark:text-[#E06C65]">
-            Empfehlung für dich
-          </div>
-          <h2 className="font-display text-xl font-bold text-[#241C16] dark:text-[#F2ECE1] mt-0.5">
-            {rec.labelDe}
-          </h2>
-          <p className="text-sm text-[#4A3D33] dark:text-[#D5C9BA] mt-1">{rec.reasonDe}</p>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#241C16] dark:text-[#F2ECE1]">
+            Gezieltes Training & Campus-Wortschatz
+          </h1>
+          <p className="mt-1 text-sm text-[#4A3D33] dark:text-[#D5C9BA]">
+            Übe gezielt schwierige Kasus-Typen im Fall oder trainiere alle 1.018 Campus-Karten nach Lektionen.
+          </p>
         </div>
-        <button
-          type="button"
-          onClick={() => onStartFocusedPractice(rec.focus, rec.recommendedStage)}
-          className="min-h-[48px] px-5 py-3 rounded-xl bg-[#9B2C2C] hover:bg-[#822424] text-white text-sm font-semibold whitespace-nowrap shrink-0 cursor-pointer"
-        >
-          Trainingsfall starten
-        </button>
+
+        <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-[#EFE8DA] dark:bg-[#221D19] border border-[#DED4C3] dark:border-[#3A312A] self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setPracticeTab('grammar')}
+            className={`min-h-[40px] px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+              practiceTab === 'grammar'
+                ? 'bg-[#FFFDF8] dark:bg-[#2B241F] text-[#9B2C2C] dark:text-[#E06C65] shadow-sm'
+                : 'text-[#4A3D33] dark:text-[#B9AA98]'
+            }`}
+          >
+            Kasus-Training (Fälle)
+          </button>
+          <button
+            type="button"
+            onClick={() => setPracticeTab('campus')}
+            className={`min-h-[40px] px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+              practiceTab === 'campus'
+                ? 'bg-[#FFFDF8] dark:bg-[#2B241F] text-[#9B2C2C] dark:text-[#E06C65] shadow-sm'
+                : 'text-[#4A3D33] dark:text-[#B9AA98]'
+            }`}
+          >
+            Campus C1&2 (1.018 Karten)
+          </button>
+        </div>
       </div>
 
-      {/* Grammar Mastery Breakdown */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {areaItems.map((item) => {
-          const stat = progress.grammarStats[item.focus];
-          const total = stat.errors + stat.successes;
-          const accuracy = total > 0 ? Math.round((stat.successes / total) * 100) : null;
-
-          return (
-            <div
-              key={item.focus}
-              className="rounded-2xl border border-[#DED4C3] dark:border-[#3A312A] bg-[#FFFDF8] dark:bg-[#221D19] p-4 flex items-center justify-between gap-3"
-            >
-              <div>
-                <div className="font-semibold text-sm text-[#241C16] dark:text-[#F2ECE1]">
-                  {item.title}
-                </div>
-                <div className="text-xs text-[#6A5A4C] dark:text-[#B9AA98] mt-0.5 font-mono-tab">
-                  {total === 0
-                    ? 'Noch nicht geübt'
-                    : `${accuracy}% sicher · ${stat.successes} richtig · ${stat.errors} Fehler`}
-                </div>
+      {practiceTab === 'campus' ? (
+        <CampusVocabTrainer
+          progress={progress}
+          lessonRange={campusLessonRange}
+          onChangeLessonRange={onChangeCampusLessonRange}
+          onRecordResult={onRecordCampusResult}
+          onResetCampusProgress={onResetCampusProgress}
+        />
+      ) : (
+        <>
+          {/* Recommended Next Drill */}
+          <div className="rounded-2xl border border-[#C89342] bg-[#FFFDF8] dark:bg-[#221D19] p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="text-xs font-bold text-[#9B2C2C] dark:text-[#E06C65]">
+                Empfehlung für dich
               </div>
-              <button
-                type="button"
-                onClick={() => onStartFocusedPractice(item.focus, item.stage)}
-                className="min-h-[40px] px-3.5 py-2 rounded-xl border border-[#DED4C3] dark:border-[#3A312A] hover:border-[#9B2C2C] text-xs font-semibold text-[#241C16] dark:text-[#F2ECE1] whitespace-nowrap cursor-pointer"
-              >
-                Üben
-              </button>
+              <h2 className="font-display text-xl font-bold text-[#241C16] dark:text-[#F2ECE1] mt-0.5">
+                {rec.labelDe}
+              </h2>
+              <p className="text-sm text-[#4A3D33] dark:text-[#D5C9BA] mt-1">{rec.reasonDe}</p>
             </div>
-          );
-        })}
-      </div>
+            <button
+              type="button"
+              onClick={() => onStartFocusedPractice(rec.focus, rec.recommendedStage)}
+              className="min-h-[48px] px-5 py-3 rounded-xl bg-[#9B2C2C] hover:bg-[#822424] text-white text-sm font-semibold whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              Trainingsfall starten
+            </button>
+          </div>
+
+          {/* Grammar Mastery Breakdown */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {areaItems.map((item) => {
+              const stat = progress.grammarStats[item.focus];
+              const total = stat.errors + stat.successes;
+              const accuracy = total > 0 ? Math.round((stat.successes / total) * 100) : null;
+
+              return (
+                <div
+                  key={item.focus}
+                  className="rounded-2xl border border-[#DED4C3] dark:border-[#3A312A] bg-[#FFFDF8] dark:bg-[#221D19] p-4 flex items-center justify-between gap-3"
+                >
+                  <div>
+                    <div className="font-semibold text-sm text-[#241C16] dark:text-[#F2ECE1]">
+                      {item.title}
+                    </div>
+                    <div className="text-xs text-[#6A5A4C] dark:text-[#B9AA98] mt-0.5 font-mono-tab">
+                      {total === 0
+                        ? 'Noch nicht geübt'
+                        : `${accuracy}% sicher · ${stat.successes} richtig · ${stat.errors} Fehler`}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onStartFocusedPractice(item.focus, item.stage)}
+                    className="min-h-[40px] px-3.5 py-2 rounded-xl border border-[#DED4C3] dark:border-[#3A312A] hover:border-[#9B2C2C] text-xs font-semibold text-[#241C16] dark:text-[#F2ECE1] whitespace-nowrap cursor-pointer"
+                  >
+                    Üben
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 };
@@ -258,14 +376,6 @@ export const ArchiveView: React.FC<{
   onStartFirstCase: () => void;
 }> = ({ progress, onResetProgress, onStartFirstCase }) => {
   const [confirmReset, setConfirmReset] = useState(false);
-  const [csvInput, setCsvInput] = useState(() =>
-    exportNounsToCsv([
-      defaultLexicon.getNoun('lapis'),
-      defaultLexicon.getNoun('pila'),
-      defaultLexicon.getNoun('liber'),
-    ])
-  );
-  const [csvFeedback, setCsvFeedback] = useState<string | null>(null);
 
   const rank = getCurrentRank(progress.totalStars);
 
@@ -277,17 +387,6 @@ export const ArchiveView: React.FC<{
     a.download = `satz-detektiv-akte-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  };
-
-  const handleTestCsvImport = () => {
-    const res = importNounsFromCsv(csvInput);
-    if (res.errors.length > 0) {
-      setCsvFeedback(`Fehler bei CSV-Prüfung: ${res.errors.join(' ')}`);
-    } else {
-      setCsvFeedback(
-        `${res.nouns.length} Vokabel-Einträge erfolgreich validiert (${res.nouns.map((n) => n.lemma).join(', ')}).`
-      );
-    }
   };
 
   return (
@@ -371,38 +470,6 @@ export const ArchiveView: React.FC<{
               </div>
             );
           })}
-        </div>
-      </section>
-
-      {/* Lexicon CSV Validator / Importer (for teachers & custom word lists) */}
-      <section className="rounded-2xl border border-[#DED4C3] dark:border-[#3A312A] bg-[#FFFDF8] dark:bg-[#221D19] p-5 space-y-3">
-        <div>
-          <h2 className="font-display text-lg font-bold text-[#241C16] dark:text-[#F2ECE1]">
-            Lexikon-Werkzeug (CSV-Import prüfen)
-          </h2>
-          <p className="text-xs text-[#6A5A4C] dark:text-[#B9AA98]">
-            Lehrkräfte können eigene Nomen-Listen im CSV-Format gegen das Grammatik-Schema testen.
-          </p>
-        </div>
-        <textarea
-          value={csvInput}
-          onChange={(e) => setCsvInput(e.target.value)}
-          rows={4}
-          aria-label="CSV Vokabeldaten"
-          className="w-full rounded-xl border border-[#DED4C3] dark:border-[#3A312A] bg-[#F7F3EA] dark:bg-[#161311] p-3 font-mono-tab text-xs text-[#241C16] dark:text-[#F2ECE1]"
-        />
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={handleTestCsvImport}
-            className="min-h-[40px] px-4 py-2 rounded-xl border border-[#DED4C3] dark:border-[#3A312A] bg-[#EFE8DA] dark:bg-[#2B241F] text-xs font-semibold text-[#241C16] dark:text-[#F2ECE1] inline-flex items-center gap-1.5 cursor-pointer"
-          >
-            <Upload className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>CSV validieren</span>
-          </button>
-          {csvFeedback && (
-            <span className="text-xs text-[#4A3D33] dark:text-[#D5C9BA]">{csvFeedback}</span>
-          )}
         </div>
       </section>
 

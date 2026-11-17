@@ -6,6 +6,7 @@ import {
   buildSearchSpace,
 } from '../core/solver';
 import {
+  CampusLessonRange,
   CaseAssignment,
   CaseDefinition,
   DifficultyStage,
@@ -15,6 +16,7 @@ import {
   TruthRuleId,
   WitnessStatement,
 } from '../core/types';
+import { buildCampusScenarios, getCampusLexicon } from '../latin/campusLexicon';
 import { LatinLexicon, defaultLexicon } from '../latin/inflector';
 import { buildSolutionSpec, renderStatement } from '../latin/renderer';
 import { SeededRandom } from './prng';
@@ -28,6 +30,7 @@ export interface GenerateCaseOptions {
   grammarBias?: GrammarFocus;
   chapterId?: string;
   lexicon?: LatinLexicon;
+  campusLessonRange?: CampusLessonRange;
 }
 
 const STAGE_RULES: Record<DifficultyStage, TruthRuleId[]> = {
@@ -192,13 +195,15 @@ export function generateCase(options: GenerateCaseOptions): CaseDefinition {
     preferredRule,
     grammarBias,
     chapterId,
-    lexicon = defaultLexicon,
+    campusLessonRange,
+    lexicon = campusLessonRange ? getCampusLexicon(campusLessonRange) : defaultLexicon,
   } = options;
 
   const rng = new SeededRandom(seed);
+  const scenarioPool = campusLessonRange ? buildCampusScenarios(campusLessonRange) : SCENARIOS;
   const baseScenario = scenarioId
-    ? SCENARIOS.find((s) => s.id === scenarioId) ?? rng.pick(SCENARIOS)
-    : rng.pick(SCENARIOS);
+    ? scenarioPool.find((s) => s.id === scenarioId) ?? rng.pick(scenarioPool)
+    : rng.pick(scenarioPool);
 
   const scenario: ScenarioTemplate = {
     ...baseScenario,
@@ -436,6 +441,7 @@ export function generateCase(options: GenerateCaseOptions): CaseDefinition {
     seed,
     stage,
     chapterId,
+    campusLessonRange,
     titleDe: scenario.titleDe,
     questionDe,
     scenario,
@@ -531,7 +537,9 @@ function buildConstructiveFallback(
       : { kind: 'OBJECT_IS', item: otherItem, negated: false },
     requireGiver && target.giver
       ? { kind: 'GIVER_IS', giver: otherGiver, negated: false }
-      : { kind: 'IN_LOCATION', person: otherPerson, location: otherLoc ?? 'atrium', negated: false },
+      : requireLocation && otherLoc
+      ? { kind: 'IN_LOCATION', person: otherPerson, location: otherLoc, negated: false }
+      : { kind: 'PERSON_ACTED_WITH', person: otherPerson, item: otherItem, negated: false },
   ];
 
   if (truthRule === 'CULPRIT_LIES_OTHERS_TRUTH') {

@@ -160,12 +160,40 @@ export interface ScenarioTemplate {
   props: ScenarioProp[];
 }
 
+export type CampusMaxLesson = 10 | 20 | 30 | 40 | 50 | 60 | 68;
+
+export type CampusLessonStop = 0 | CampusMaxLesson;
+
+export interface CampusLessonRange {
+  from: CampusLessonStop;
+  to: CampusMaxLesson;
+}
+
+export type CampusBand = '1-10' | '11-20' | '21-30' | '31-40' | '41-50' | '51-60' | '61-68';
+
+export interface CampusCard {
+  id: string;
+  band: CampusBand;
+  maxLesson: CampusMaxLesson;
+  front: string;
+  back: string;
+  pos: 'noun' | 'verb' | 'adjective' | 'other';
+  nounMeta?: {
+    lemma: string;
+    genitive: string;
+    stem: string;
+    declension: DeclensionType;
+    gender: Gender;
+  };
+}
+
 export interface CaseDefinition {
   id: string;
   seed: string;
   stage: DifficultyStage;
   isCurated?: boolean;
   chapterId?: string;
+  campusLessonRange?: CampusLessonRange;
   titleDe: string;
   questionDe: string;
   scenario: ScenarioTemplate;
@@ -191,11 +219,19 @@ export interface PlayerProgress {
   totalStars: number;
   unlockedBadges: string[];
   grammarStats: Record<GrammarFocus, { errors: number; successes: number; lastPracticed?: string }>;
+  campusStats: {
+    masteredIds: string[];
+    wrongIds: string[];
+    practicedCount: number;
+  };
   settings: {
     theme: 'light' | 'dark';
     reducedMotion: boolean;
     musicVolume: number;
     sfxVolume: number;
     musicEnabled: boolean;
+    vocabularySource: 'standard' | 'campus';
+    campusLessonFrom: CampusLessonStop;
+    campusLessonTo: CampusMaxLesson;
   };
 }
