@@ -5,8 +5,17 @@ import path from 'path';
 import {defineConfig} from 'vite';
 import {VitePWA} from 'vite-plugin-pwa';
 
+function normalizeBasePath(raw?: string): string {
+  if (!raw || raw === '/') return '/';
+  const withLeading = raw.startsWith('/') ? raw : `/${raw}`;
+  return withLeading.endsWith('/') ? withLeading : `${withLeading}/`;
+}
+
 export default defineConfig(() => {
+  const base = normalizeBasePath(process.env.VITE_BASE_PATH);
+
   return {
+    base,
     plugins: [
       react(),
       tailwindcss(),
@@ -14,30 +23,30 @@ export default defineConfig(() => {
         registerType: 'autoUpdate',
         includeAssets: ['icon.svg', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'pwa-maskable-512x512.png'],
         manifest: {
-          id: '/',
+          id: base,
           name: 'Satz-Detektiv',
           short_name: 'SatzDetektiv',
           description: 'Latein-Lernspiel im Stil eines Detektiv-Logikrätsels für Schüler.',
           theme_color: '#F7F3EA',
           background_color: '#F7F3EA',
           display: 'standalone',
-          start_url: '/',
-          scope: '/',
+          start_url: base,
+          scope: base,
           icons: [
             {
-              src: '/pwa-192x192.png',
+              src: `${base}pwa-192x192.png`,
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-512x512.png',
+              src: `${base}pwa-512x512.png`,
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-maskable-512x512.png',
+              src: `${base}pwa-maskable-512x512.png`,
               sizes: '512x512',
               type: 'image/png',
               purpose: 'maskable',

@@ -417,14 +417,16 @@ export const ArchiveView: React.FC<{
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <a
-            href="/satz-detektiv-offline.html"
-            download="satz-detektiv.html"
-            className="min-h-[40px] px-4 py-2 rounded-xl border border-[#C89342] bg-[#FFFDF8] dark:bg-[#2B241F] text-xs font-semibold text-[#241C16] dark:text-[#F2ECE1] hover:bg-[#EFE8DA] dark:hover:bg-[#382F28] inline-flex items-center gap-1.5"
-          >
-            <Download className="w-4 h-4 text-[#9B2C2C] dark:text-[#E06C65]" aria-hidden="true" />
-            <span>Einzel-HTML herunterladen</span>
-          </a>
+          {(typeof window === 'undefined' || window.location.protocol !== 'file:') && (
+            <a
+              href={`${import.meta.env.BASE_URL}satz-detektiv-offline.html`}
+              download="satz-detektiv.html"
+              className="min-h-[40px] px-4 py-2 rounded-xl border border-[#C89342] bg-[#FFFDF8] dark:bg-[#2B241F] text-xs font-semibold text-[#241C16] dark:text-[#F2ECE1] hover:bg-[#EFE8DA] dark:hover:bg-[#382F28] inline-flex items-center gap-1.5"
+            >
+              <Download className="w-4 h-4 text-[#9B2C2C] dark:text-[#E06C65]" aria-hidden="true" />
+              <span>Einzel-HTML herunterladen</span>
+            </a>
+          )}
           <button
             type="button"
             onClick={handleExport}
