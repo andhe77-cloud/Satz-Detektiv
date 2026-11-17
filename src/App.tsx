@@ -1,0 +1,244 @@
+import { useEffect, useMemo, useState } from 'react';
+import { soundEngine } from './audio/soundEngine';
+import { getDailyCase, getStoryChapters } from './content/storyCases';
+import { CaseDefinition, DifficultyStage, GrammarFocus, PlayerProgress } from './core/types';
+import { generateCase } from './generator/caseGenerator';
+import { recordGrammarOutcome, loadProgress, resetProgress, saveProgress } from './services/storage';
+import { CaseWorkspace } from './ui/components/CaseWorkspace';
+import { AppView, Header, MobileBottomNav } from './ui/components/Header';
+import { LegalModal, LegalTab } from './ui/components/LegalModal';
+import { OfflineIndicator } from './ui/components/OfflineIndicator';
+import { SettingsModal } from './ui/components/SettingsModal';
+import { ArchiveView, CasesHubView, PracticeView } from './ui/components/Views';
+
+export default function App() {
+  const [progress, setProgress] = useState<PlayerProgress>(() => loadProgress());
+  const [activeView, setActiveView] = useState<AppView>('cases');
+  const [activeCase, setActiveCase] = useState<CaseDefinition | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [legalModal, setLegalModal] = useState<{ open: boolean; tab: LegalTab }>({
+    open: false,
+    tab: 'privacy',
+  });
+
+  const chapters = useMemo(() => getStoryChapters(), []);
+  const allStoryCases = useMemo(() => chapters.flatMap((ch) => ch.cases), [chapters]);
+
+  // Sync theme, reduced-motion, and Web Audio settings
+  useEffect(() => {
+    const root = document.documentElement;
+    if (progress.settings.theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    if (progress.settings.reducedMotion) {
+      root.classList.add('reduced-motion');
+    } else {
+      root.classList.remove('reduced-motion');
+    }
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) {
+      metaTheme.setAttribute('content', progress.settings.theme === 'dark' ? '#161311' : '#F7F3EA');
+    }
+
+    soundEngine.configure({
+      musicVolume: progress.settings.musicVolume,
+      sfxVolume: progress.settings.sfxVolume,
+      musicEnabled: progress.settings.musicEnabled,
+    });
+    saveProgress(progress);
+  }, [progress]);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  const handleNavigate = (view: AppView) => {
+    soundEngine.unlockAndMaybeStartMusic();
+    if (view === 'daily') {
+      setActiveCase(getDailyCase(todayStr));
+      setActiveView('daily');
+      return;
+    }
+    setActiveView(view);
+  };
+
+  const handleStartStoryCase = (caseId: string) => {
+    soundEngine.unlockAndMaybeStartMusic();
+    const found = allStoryCases.find((c) => c.id === caseId);
+    if (found) {
+      setActiveCase(found);
+      setActiveView('play');
+    }
+  };
+
+  const handleStartRandomStage = (stage: DifficultyStage) => {
+    soundEngine.unlockAndMaybeStartMusic();
+    const seed = `free-${stage}-${Date.now()}`;
+    setActiveCase(generateCase({ seed, stage }));
+    setActiveView('play');
+  };
+
+  const handleStartFocusedPractice = (focus: GrammarFocus, stage: DifficultyStage) => {
+    soundEngine.unlockAndMaybeStartMusic();
+    const seed = `practice-${focus}-${Date.now()}`;
+    setActiveCase(generateCase({ seed, stage, grammarBias: focus }));
+    setActiveView('play');
+  };
+
+  const handleCaseSolved = (result: {
+    caseId: string;
+    stars: number;
+    attempts: number;
+    grammarTags: GrammarFocus[];
+  }) => {
+    setProgress((prev) => {
+      const isDaily = activeView === 'daily' || result.caseId.startsWith('gen-') && result.caseId.includes(`daily-${todayStr}`);
+      const nextSolved = { ...prev.solvedCaseIds };
+      const nextDaily = { ...prev.dailySolvedDates };
+
+      if (isDaily) {
+        const prevDaily = nextDaily[todayStr];
+        nextDaily[todayStr] = {
+          stars: Math.max(prevDaily?.stars ?? 0, result.stars),
+          attempts: result.attempts,
+        };
+      } else {
+        const existing = nextSolved[result.caseId];
+        nextSolved[result.caseId] = {
+          stars: Math.max(existing?.stars ?? 0, result.stars),
+          attempts: result.attempts,
+          solvedAt: new Date().toISOString(),
+        };
+      }
+
+      const totalStars =
+        Object.values(nextSolved).reduce((sum, x) => sum + x.stars, 0) +
+        Object.values(nextDaily).reduce((sum, x) => sum + x.stars, 0);
+
+      const badges = new Set(prev.unlockedBadges);
+      badges.add('first-case');
+      if (result.stars === 3) badges.add('perfect-deduction');
+      if (isDaily) badges.add('daily-sleuth');
+      if (activeCase && activeCase.stage >= 3) badges.add('dative-master');
+      if (activeCase && activeCase.stage === 4) badges.add('master-of-rome');
+      if (totalStars >= 10) badges.add('five-stars');
+
+      return {
+        ...prev,
+        solvedCaseIds: nextSolved,
+        dailySolvedDates: nextDaily,
+        totalStars,
+        unlockedBadges: [...badges],
+      };
+    });
+  };
+
+  const handleGrammarOutcome = (tags: GrammarFocus[], hadError: boolean) => {
+    setProgress((prev) => recordGrammarOutcome(prev, tags, hadError));
+  };
+
+  const handleNextCase = () => {
+    if (!activeCase) return;
+    const idx = allStoryCases.findIndex((c) => c.id === activeCase.id);
+    if (idx >= 0 && idx + 1 < allStoryCases.length) {
+      setActiveCase(allStoryCases[idx + 1]);
+      return;
+    }
+    // Otherwise generate a fresh case on the same stage
+    handleStartRandomStage(activeCase.stage);
+  };
+
+  const hasNextStoryCase = Boolean(
+    activeCase &&
+      (() => {
+        const idx = allStoryCases.findIndex((c) => c.id === activeCase.id);
+        return idx >= 0 && idx + 1 < allStoryCases.length;
+      })()
+  );
+
+  return (
+    <div className="min-h-dvh flex flex-col bg-[#F7F3EA] dark:bg-[#161311] text-[#241C16] dark:text-[#F2ECE1]">
+      <Header
+        activeView={activeView}
+        onNavigate={handleNavigate}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
+
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 pb-20 md:pb-10">
+        {(activeView === 'play' || activeView === 'daily') && activeCase ? (
+          <CaseWorkspace
+            caseData={activeCase}
+            hasNextCase={hasNextStoryCase}
+            onBack={() => setActiveView('cases')}
+            onNextCase={handleNextCase}
+            onSolved={handleCaseSolved}
+            onGrammarOutcome={handleGrammarOutcome}
+          />
+        ) : activeView === 'practice' ? (
+          <PracticeView
+            progress={progress}
+            onStartFocusedPractice={handleStartFocusedPractice}
+          />
+        ) : activeView === 'archive' ? (
+          <ArchiveView
+            progress={progress}
+            onResetProgress={() => setProgress(resetProgress())}
+            onStartFirstCase={() => setActiveView('cases')}
+          />
+        ) : (
+          <CasesHubView
+            chapters={chapters}
+            progress={progress}
+            onStartCase={handleStartStoryCase}
+            onStartRandomStage={handleStartRandomStage}
+            onStartDaily={() => handleNavigate('daily')}
+          />
+        )}
+      </main>
+
+      <footer className="hidden md:block border-t border-[#DED4C3] dark:border-[#3A312A] py-4 px-6 text-xs text-[#6A5A4C] dark:text-[#B9AA98]">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+          <span>Satz-Detektiv · Latein-Logikrätsel ohne Werbung und ohne Tracking</span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setLegalModal({ open: true, tab: 'privacy' })}
+              className="hover:underline cursor-pointer"
+            >
+              Datenschutz
+            </button>
+            <span aria-hidden="true">·</span>
+            <button
+              type="button"
+              onClick={() => setLegalModal({ open: true, tab: 'imprint' })}
+              className="hover:underline cursor-pointer"
+            >
+              Impressum
+            </button>
+          </div>
+        </div>
+      </footer>
+
+      <MobileBottomNav activeView={activeView} onNavigate={handleNavigate} />
+
+      <SettingsModal
+        open={settingsOpen}
+        settings={progress.settings}
+        onChangeSettings={(patch) =>
+          setProgress((prev) => ({ ...prev, settings: { ...prev.settings, ...patch } }))
+        }
+        onOpenLegal={(tab) => setLegalModal({ open: true, tab })}
+        onClose={() => setSettingsOpen(false)}
+      />
+
+      <LegalModal
+        open={legalModal.open}
+        tab={legalModal.tab}
+        onChangeTab={(tab) => setLegalModal((prev) => ({ ...prev, tab }))}
+        onClose={() => setLegalModal((prev) => ({ ...prev, open: false }))}
+      />
+
+      <OfflineIndicator />
+    </div>
+  );
+}

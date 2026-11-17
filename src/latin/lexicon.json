@@ -1,0 +1,475 @@
+{
+  "version": 1,
+  "nouns": [
+    {
+      "id": "marcus",
+      "lemma": "Marcus",
+      "genitive": "Marci",
+      "stem": "Marc",
+      "declension": "o-masc",
+      "gender": "m",
+      "meaningDe": "Marcus",
+      "category": "person",
+      "lesson": 1
+    },
+    {
+      "id": "gaius",
+      "lemma": "Gaius",
+      "genitive": "Gaii",
+      "stem": "Gai",
+      "declension": "o-masc",
+      "gender": "m",
+      "meaningDe": "Gaius",
+      "category": "person",
+      "lesson": 1
+    },
+    {
+      "id": "lucius",
+      "lemma": "Lucius",
+      "genitive": "Lucii",
+      "stem": "Luci",
+      "declension": "o-masc",
+      "gender": "m",
+      "meaningDe": "Lucius",
+      "category": "person",
+      "lesson": 1
+    },
+    {
+      "id": "claudia",
+      "lemma": "Claudia",
+      "genitive": "Claudiae",
+      "stem": "Claudi",
+      "declension": "a",
+      "gender": "f",
+      "meaningDe": "Claudia",
+      "category": "person",
+      "lesson": 1
+    },
+    {
+      "id": "cornelia",
+      "lemma": "Cornelia",
+      "genitive": "Corneliae",
+      "stem": "Corneli",
+      "declension": "a",
+      "gender": "f",
+      "meaningDe": "Cornelia",
+      "category": "person",
+      "lesson": 1
+    },
+    {
+      "id": "lapis",
+      "lemma": "lapis",
+      "genitive": "lapidis",
+      "stem": "lapid",
+      "declension": "cons",
+      "gender": "m",
+      "meaningDe": "der Stein",
+      "category": "item",
+      "lesson": 1
+    },
+    {
+      "id": "pila",
+      "lemma": "pila",
+      "genitive": "pilae",
+      "stem": "pil",
+      "declension": "a",
+      "gender": "f",
+      "meaningDe": "der Ball",
+      "category": "item",
+      "lesson": 1
+    },
+    {
+      "id": "liber",
+      "lemma": "liber",
+      "genitive": "libri",
+      "stem": "libr",
+      "declension": "o-er",
+      "gender": "m",
+      "meaningDe": "das Buch",
+      "category": "item",
+      "lesson": 1
+    },
+    {
+      "id": "calix",
+      "lemma": "calix",
+      "genitive": "calicis",
+      "stem": "calic",
+      "declension": "cons",
+      "gender": "m",
+      "meaningDe": "der Becher",
+      "category": "item",
+      "lesson": 2
+    },
+    {
+      "id": "clavis",
+      "lemma": "clavis",
+      "genitive": "clavis",
+      "stem": "clav",
+      "declension": "cons-i",
+      "gender": "f",
+      "meaningDe": "der Schlüssel",
+      "category": "item",
+      "lesson": 2
+    },
+    {
+      "id": "anulus",
+      "lemma": "anulus",
+      "genitive": "anuli",
+      "stem": "anul",
+      "declension": "o-masc",
+      "gender": "m",
+      "meaningDe": "der Ring",
+      "category": "item",
+      "lesson": 2
+    },
+    {
+      "id": "nummus",
+      "lemma": "nummus",
+      "genitive": "nummi",
+      "stem": "numm",
+      "declension": "o-masc",
+      "gender": "m",
+      "meaningDe": "die Münze",
+      "category": "item",
+      "lesson": 2
+    },
+    {
+      "id": "saccus",
+      "lemma": "saccus",
+      "genitive": "sacci",
+      "stem": "sacc",
+      "declension": "o-masc",
+      "gender": "m",
+      "meaningDe": "der Sack / Beutel",
+      "category": "item",
+      "lesson": 2
+    },
+    {
+      "id": "culter",
+      "lemma": "culter",
+      "genitive": "cultri",
+      "stem": "cultr",
+      "declension": "o-er",
+      "gender": "m",
+      "meaningDe": "das Messer",
+      "category": "item",
+      "lesson": 3
+    },
+    {
+      "id": "corbis",
+      "lemma": "corbis",
+      "genitive": "corbis",
+      "stem": "corb",
+      "declension": "cons-i",
+      "gender": "f",
+      "meaningDe": "der Korb",
+      "category": "item",
+      "lesson": 3
+    },
+    {
+      "id": "fenestra",
+      "lemma": "fenestra",
+      "genitive": "fenestrae",
+      "stem": "fenestr",
+      "declension": "a",
+      "gender": "f",
+      "meaningDe": "das Fenster",
+      "category": "target",
+      "lesson": 1
+    },
+    {
+      "id": "placenta",
+      "lemma": "placenta",
+      "genitive": "placentae",
+      "stem": "placent",
+      "declension": "a",
+      "gender": "f",
+      "meaningDe": "der Honigkuchen",
+      "category": "target",
+      "lesson": 1
+    },
+    {
+      "id": "statua",
+      "lemma": "statua",
+      "genitive": "statuae",
+      "stem": "statu",
+      "declension": "a",
+      "gender": "f",
+      "meaningDe": "die Statue",
+      "category": "target",
+      "lesson": 2
+    },
+    {
+      "id": "epistula",
+      "lemma": "epistula",
+      "genitive": "epistulae",
+      "stem": "epistul",
+      "declension": "a",
+      "gender": "f",
+      "meaningDe": "der Brief",
+      "category": "target",
+      "lesson": 2
+    },
+    {
+      "id": "amphora",
+      "lemma": "amphora",
+      "genitive": "amphorae",
+      "stem": "amphor",
+      "declension": "a",
+      "gender": "f",
+      "meaningDe": "die Amphore",
+      "category": "target",
+      "lesson": 3
+    },
+    {
+      "id": "corona",
+      "lemma": "corona",
+      "genitive": "coronae",
+      "stem": "coron",
+      "declension": "a",
+      "gender": "f",
+      "meaningDe": "der Lorbeerkranz",
+      "category": "target",
+      "lesson": 3
+    },
+    {
+      "id": "atrium",
+      "lemma": "atrium",
+      "genitive": "atrii",
+      "stem": "atri",
+      "declension": "o-neut",
+      "gender": "n",
+      "meaningDe": "die Halle (Atrium)",
+      "category": "location",
+      "lesson": 4
+    },
+    {
+      "id": "hortus",
+      "lemma": "hortus",
+      "genitive": "horti",
+      "stem": "hort",
+      "declension": "o-masc",
+      "gender": "m",
+      "meaningDe": "der Garten",
+      "category": "location",
+      "lesson": 4
+    },
+    {
+      "id": "officina",
+      "lemma": "officina",
+      "genitive": "officinae",
+      "stem": "officin",
+      "declension": "a",
+      "gender": "f",
+      "meaningDe": "die Werkstatt",
+      "category": "location",
+      "lesson": 4
+    },
+    {
+      "id": "forum",
+      "lemma": "forum",
+      "genitive": "fori",
+      "stem": "for",
+      "declension": "o-neut",
+      "gender": "n",
+      "meaningDe": "der Marktplatz",
+      "category": "location",
+      "lesson": 4
+    },
+    {
+      "id": "villa",
+      "lemma": "villa",
+      "genitive": "villae",
+      "stem": "vill",
+      "declension": "a",
+      "gender": "f",
+      "meaningDe": "das Landhaus",
+      "category": "location",
+      "lesson": 4
+    },
+    {
+      "id": "templum",
+      "lemma": "templum",
+      "genitive": "templi",
+      "stem": "templ",
+      "declension": "o-neut",
+      "gender": "n",
+      "meaningDe": "der Tempel",
+      "category": "location",
+      "lesson": 4
+    }
+  ],
+  "verbs": [
+    {
+      "id": "frangere",
+      "infinitive": "frangere",
+      "conjugation": "cons",
+      "present3Sg": "frangit",
+      "perfect3Sg": "fregit",
+      "meaningDeInf": "zerbrechen",
+      "meaningDePres3Sg": "zerbricht",
+      "meaningDePerfPart": "zerbrochen",
+      "meaningDePerfAux": "hat",
+      "lesson": 1
+    },
+    {
+      "id": "iacere",
+      "infinitive": "iacere",
+      "conjugation": "mixed",
+      "present3Sg": "iacit",
+      "perfect3Sg": "iecit",
+      "meaningDeInf": "werfen",
+      "meaningDePres3Sg": "wirft",
+      "meaningDePerfPart": "geworfen",
+      "meaningDePerfAux": "hat",
+      "lesson": 1
+    },
+    {
+      "id": "rapere",
+      "infinitive": "rapere",
+      "conjugation": "mixed",
+      "present3Sg": "rapit",
+      "perfect3Sg": "rapuit",
+      "meaningDeInf": "stehlen / wegschnappen",
+      "meaningDePres3Sg": "stiehlt",
+      "meaningDePerfPart": "gestohlen",
+      "meaningDePerfAux": "hat",
+      "lesson": 1
+    },
+    {
+      "id": "celare",
+      "infinitive": "celare",
+      "conjugation": "a",
+      "present3Sg": "celat",
+      "perfect3Sg": "celavit",
+      "meaningDeInf": "verstecken",
+      "meaningDePres3Sg": "versteckt",
+      "meaningDePerfPart": "versteckt",
+      "meaningDePerfAux": "hat",
+      "lesson": 2
+    },
+    {
+      "id": "capere",
+      "infinitive": "capere",
+      "conjugation": "mixed",
+      "present3Sg": "capit",
+      "perfect3Sg": "cepit",
+      "meaningDeInf": "nehmen",
+      "meaningDePres3Sg": "nimmt",
+      "meaningDePerfPart": "genommen",
+      "meaningDePerfAux": "hat",
+      "lesson": 2
+    },
+    {
+      "id": "tangere",
+      "infinitive": "tangere",
+      "conjugation": "cons",
+      "present3Sg": "tangit",
+      "perfect3Sg": "tetigit",
+      "meaningDeInf": "berühren / umstoßen",
+      "meaningDePres3Sg": "berührt",
+      "meaningDePerfPart": "berührt",
+      "meaningDePerfAux": "hat",
+      "lesson": 2
+    },
+    {
+      "id": "portare",
+      "infinitive": "portare",
+      "conjugation": "a",
+      "present3Sg": "portat",
+      "perfect3Sg": "portavit",
+      "meaningDeInf": "tragen / bringen",
+      "meaningDePres3Sg": "trägt",
+      "meaningDePerfPart": "getragen",
+      "meaningDePerfAux": "hat",
+      "lesson": 2
+    },
+    {
+      "id": "dare",
+      "infinitive": "dare",
+      "conjugation": "a",
+      "present3Sg": "dat",
+      "perfect3Sg": "dedit",
+      "meaningDeInf": "geben",
+      "meaningDePres3Sg": "gibt",
+      "meaningDePerfPart": "gegeben",
+      "meaningDePerfAux": "hat",
+      "lesson": 3
+    },
+    {
+      "id": "esse",
+      "infinitive": "esse",
+      "conjugation": "irreg",
+      "present3Sg": "est",
+      "perfect3Sg": "fuit",
+      "imperfect3Sg": "erat",
+      "meaningDeInf": "sein",
+      "meaningDePres3Sg": "ist",
+      "meaningDePerfPart": "gewesen",
+      "meaningDePerfAux": "ist",
+      "lesson": 4
+    },
+    {
+      "id": "dicere",
+      "infinitive": "dicere",
+      "conjugation": "cons",
+      "present3Sg": "dicit",
+      "perfect3Sg": "dixit",
+      "meaningDeInf": "sagen",
+      "meaningDePres3Sg": "sagt",
+      "meaningDePerfPart": "gesagt",
+      "meaningDePerfAux": "hat",
+      "lesson": 3
+    }
+  ],
+  "particles": [
+    {
+      "id": "non",
+      "latin": "non",
+      "pos": "adverb",
+      "grammarNote": "Verneinungspartikel",
+      "meaningDe": "nicht",
+      "lesson": 1
+    },
+    {
+      "id": "et",
+      "latin": "et",
+      "pos": "conjunction",
+      "grammarNote": "Konjunktion (und)",
+      "meaningDe": "und",
+      "lesson": 2
+    },
+    {
+      "id": "sed",
+      "latin": "sed",
+      "pos": "conjunction",
+      "grammarNote": "Konjunktion (aber)",
+      "meaningDe": "aber",
+      "lesson": 2
+    },
+    {
+      "id": "in",
+      "latin": "in",
+      "pos": "preposition",
+      "grammarNote": "Präposition + Ablativ (wo?)",
+      "meaningDe": "in / auf",
+      "lesson": 4
+    },
+    {
+      "id": "ei",
+      "latin": "ei",
+      "pos": "pronoun",
+      "grammarNote": "Dativ Singular von is/ea („ihm / ihr“)",
+      "meaningDe": "ihm / ihr",
+      "lesson": 3
+    },
+    {
+      "id": "verum",
+      "latin": "verum",
+      "pos": "adverb",
+      "grammarNote": "Akkusativ Neutrum („das Wahre / die Wahrheit“)",
+      "meaningDe": "die Wahrheit",
+      "lesson": 3
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><title>Satz-Detektiv</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#f3e6c8;--fg:#3b2a1a;--card:#fff8e6;--acc:#8c3b1e;--mut:#7a6247;--wall:#e8c98f;--floor:#8a5a35;--ok:#2b7a3d;--bad:#b3261e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#1f1710;--fg:#f1e3c6;--card:#33261a;--acc:#e0975c;--mut:#c2aa84;--wall:#5a4326;--floor:#3a2615;--ok:#6fcf86;--bad:#ff8a80}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#1f1710;--fg:#f1e3c6;--card:#33261a;--acc:#e0975c;--mut:#c2aa84;--wall:#5a4326;--floor:#3a2615;--ok:#6fcf86;--bad:#ff8a80}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--fg);font-family:Georgia,"Times New Roman",serif}
+#app{max-width:560px;margin:0 auto;padding:8px 10px 28px}
+h1{font-size:20px;margin:6px 0 2px}.sub{color:var(--mut);font-size:14px;margin:0 0 8px}
+#room{position:relative;height:340px;border-radius:14px;overflow:hidden;border:3px solid var(--acc);background:linear-gradient(var(--wall) 0 66%,var(--floor) 66%)}
+#room::before{content:"";position:absolute;left:0;right:0;top:66%;height:6px;background:rgba(0,0,0,.25)}
+#bub{position:absolute;left:8px;right:8px;top:8px;background:#fffdf5;color:#3b2a1a;border:2px solid #3b2a1a;border-radius:14px;padding:8px 12px 10px;font-size:20px;font-style:italic;min-height:58px;z-index:3}
+#bub b{font-style:normal;font-size:13px;color:#8c3b1e}
+#bub::after{content:"";position:absolute;bottom:-11px;left:var(--tx,10%);width:16px;height:16px;background:#fffdf5;border-right:2px solid #3b2a1a;border-bottom:2px solid #3b2a1a;transform:translateX(-50%) rotate(45deg)}
+#cast{position:absolute;left:0;right:0;bottom:18px;display:flex;align-items:flex-end;padding:0 4px}
+.fg{flex:1;position:relative;transform-origin:bottom;transition:transform .2s;cursor:pointer}
+.fg.on{transform:scale(1.3);z-index:2}
+.fg svg{width:100%;display:block}
+.nm{display:block;text-align:center;font-size:11px;font-weight:700;color:#fff3dc;text-shadow:0 1px 2px #000;margin-top:1px}
+.mk{position:absolute;top:0;right:4px;font-size:18px;font-weight:700;text-shadow:0 1px 2px #fff}
+#tools{display:flex;gap:6px;margin:8px 0}
+#tools button{flex:1;border:2px solid var(--acc);background:var(--card);color:var(--fg);border-radius:10px;padding:8px 4px;font:600 13px Georgia,serif}
+#tr,#vo{font-size:15px;color:var(--mut);min-height:0;margin:2px 2px 6px}
+#sol{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:21px;font-style:italic;background:var(--card);border-radius:12px;padding:12px;margin-top:6px}
+.slot{min-width:84px;min-height:34px;border:2px dashed var(--acc);border-radius:8px;padding:2px 8px;text-align:center;font-style:normal;font-weight:700;line-height:34px}
+.slot.bad{border-color:var(--bad);color:var(--bad)}
+#pool{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;min-height:44px}
+.tile{touch-action:none;user-select:none;-webkit-user-select:none;background:var(--acc);color:#fff;border-radius:8px;padding:8px 12px;font:700 17px Georgia,serif;cursor:grab}
+.ghost{position:fixed;transform:translate(-50%,-50%);pointer-events:none;z-index:99;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+.btn{border:0;background:var(--acc);color:#fff;font:700 17px Georgia,serif;padding:12px 20px;border-radius:12px;cursor:pointer}
+#fb{margin-top:10px;font-size:16px;font-weight:700}
+</style></head><body>
+<div id="app">
+ <h1 id="ti"></h1><p class="sub" id="qs"></p>
+ <div id="room"><div id="bub"></div><div id="cast"></div></div>
+ <div id="tools"><button id="trb"></button><button id="mkb"></button><button id="vb">📖 Vokabeln</button></div>
+ <div id="tr"></div><div id="vo"></div>
+ <div id="sol"></div><div id="pool"></div>
+ <button class="btn" id="chk">Lösung prüfen</button><button class="btn" id="nx" style="display:none">Nächster Fall</button>
+ <div id="fb"></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const FIG=[
+ {n:'Marcus',skin:'#f1c9a0',coat:'#2f5d8a',hat:'top',ex:'mus',hair:'#3b2a1a'},
+ {n:'Gaius',skin:'#e3b184',coat:'#7a3b2e',hat:'cap',ex:'',hair:'#222'},
+ {n:'Lucius',skin:'#f4d3b0',coat:'#3d6b3a',hat:'',ex:'gl',hair:'#b5651d'},
+ {n:'Claudia',skin:'#f1c9a0',coat:'#8a2f6b',hat:'bow',ex:'',hair:'#5a3a1a'},
+ {n:'Cornelia',skin:'#d9a273',coat:'#c27a1e',hat:'band',ex:'',hair:'#111'}
+];
+const P=['Marcus','Gaius','Lucius','Claudia','Cornelia'];
+const CASES=[
+ {t:'Fall 1: Das Fenster ist kaputt!',q:'Wer war es, und was hat er geworfen?',rule:'Genau eine Aussage ist falsch.',
+  s:[['Gaius fenestram fregit.','Gaius hat das Fenster zerbrochen.'],['Lucius fenestram fregit.','Lucius hat das Fenster zerbrochen.'],['Pila fenestram non fregit.','Der Ball hat das Fenster nicht zerbrochen.'],['Liber fenestram non fregit.','Das Buch hat das Fenster nicht zerbrochen.'],['Lucius lapidem non iecit.','Lucius hat den Stein nicht geworfen.']],
+  voc:'fenestra Fenster · frangere, fregit zerbrechen · iacere, iecit werfen · lapis Stein · pila Ball · liber Buch · non nicht',
+  tpl:['{}','{}','iecit.'],ans:['Gaius','lapidem'],de:'Gaius hat den Stein geworfen.',
+  tiles:[...P,'Gaium','lapidem','pilam','librum','lapis','pila']},
+ {t:'Fall 2: Noch ein Fenster!',q:'Wer war es, was hat er geworfen, und wer hat es ihm gegeben?',rule:'Genau eine Aussage ist falsch.',
+  s:[['Gaius fenestram fregit.','Gaius hat das Fenster zerbrochen.'],['Lucius fenestram fregit.','Lucius hat das Fenster zerbrochen.'],['Lapis fenestram non fregit.','Der Stein hat das Fenster nicht zerbrochen.'],['Liber fenestram non fregit.','Das Buch hat das Fenster nicht zerbrochen.'],['Cornelia Lucio pilam dedit.','Cornelia hat Lucius den Ball gegeben.']],
+  voc:'fenestra Fenster · frangere, fregit zerbrechen · iacere, iecit werfen · dare, dedit geben · ei ihm · lapis Stein · pila Ball · liber Buch',
+  tpl:['{}','{}','iecit;','{}','ei dedit.'],ans:['Lucius','pilam','Cornelia'],de:'Lucius hat den Ball geworfen; Cornelia hat ihn ihm gegeben.',
+  tiles:[...P,'Lucium','Corneliam','lapidem','pilam','librum','pila']}
+];
+function svg(f){
+ const hat={top:`<rect x="34" y="6" width="32" height="20" rx="3" fill="#222"/><rect x="26" y="24" width="48" height="6" rx="3" fill="#222"/>`,cap:`<path d="M26 30 Q50 2 74 30Z" fill="#555"/><rect x="26" y="28" width="52" height="5" rx="2" fill="#333"/>`,bow:`<circle cx="50" cy="20" r="9" fill="${f.hair}"/><path d="M42 22 L30 14 V30Z M58 22 L70 14 V30Z" fill="#c9302c"/>`,band:`<rect x="27" y="26" width="46" height="6" rx="3" fill="#c9302c"/>`,'':''}[f.hat];
+ const ex={mus:`<path d="M38 54 Q50 48 62 54 Q50 58 38 54Z" fill="#3b2a1a"/>`,gl:`<circle cx="41" cy="44" r="8" fill="none" stroke="#222" stroke-width="2"/><circle cx="59" cy="44" r="8" fill="none" stroke="#222" stroke-width="2"/><path d="M49 44h2" stroke="#222" stroke-width="2"/>`,'':''}[f.ex];
+ return `<svg viewBox="0 0 100 160"><ellipse cx="50" cy="154" rx="30" ry="5" fill="rgba(0,0,0,.3)"/><rect x="34" y="112" width="12" height="40" rx="5" fill="#2b2118"/><rect x="54" y="112" width="12" height="40" rx="5" fill="#2b2118"/><rect x="12" y="74" width="13" height="42" rx="6" fill="${f.coat}"/><rect x="75" y="74" width="13" height="42" rx="6" fill="${f.coat}"/><circle cx="18" cy="118" r="6" fill="${f.skin}"/><circle cx="82" cy="118" r="6" fill="${f.skin}"/><path d="M24 74 Q50 60 76 74 L80 124 H20Z" fill="${f.coat}"/><rect x="46" y="64" width="8" height="60" fill="rgba(0,0,0,.18)"/><circle cx="50" cy="42" r="24" fill="${f.skin}"/><path d="M26 40 Q50 8 74 40 Q50 24 26 40Z" fill="${f.hair}"/><circle cx="41" cy="44" r="3" fill="#222"/><circle cx="59" cy="44" r="3" fill="#222"/><path d="M42 57 Q50 63 58 57" stroke="#7a3b2e" stroke-width="2.5" fill="none" stroke-linecap="round"/>${ex}${hat}</svg>`;
+}
+let ci=0,sel=0,marks,slots,bad,jok,rev,tries;
+function load(){
+ const C=CASES[ci];sel=0;marks=['','','','',''];slots=Array(C.ans.length).fill(null);bad=[];jok=2;rev={};tries=0;
+ $('ti').textContent=C.t;$('qs').textContent=C.q+' Regel: '+C.rule;
+ $('vo').textContent='';$('fb').textContent='';$('nx').style.display='none';$('chk').style.display='';
+ all();
+}
+function all(){cast();bub();solve()}
+function cast(){
+ $('cast').innerHTML=FIG.map((f,i)=>`<div class="fg${i===sel?' on':''}" onclick="pick(${i})">${svg(f)}<span class="nm">${f.n}</span><span class="mk">${marks[i]}</span></div>`).join('');
+}
+function bub(){
+ const C=CASES[ci];
+ $('bub').style.setProperty('--tx',((sel+.5)*20)+'%');
+ $('bub').innerHTML=`<b>${FIG[sel].n}</b><br>„${C.s[sel][0]}“`;
+ $('tr').textContent=rev[sel]?'🇩🇪 '+C.s[sel][1]:'';
+ $('trb').textContent='🔎 Übersetzung ('+jok+')';
+ $('mkb').textContent='Aussage: '+(['❔ offen','✔ wahr','✘ falsch'][['','✔','✘'].indexOf(marks[sel])]);
+}
+function pick(i){sel=i;cast();bub()}
+$('trb').onclick=()=>{if(!rev[sel]&&jok>0){rev[sel]=1;jok--}bub()};
+$('mkb').onclick=()=>{const o=['','✔','✘'];marks[sel]=o[(o.indexOf(marks[sel])+1)%3];cast();bub()};
+$('vb').onclick=()=>{$('vo').textContent=$('vo').textContent?'':CASES[ci].voc};
+function solve(){
+ const C=CASES[ci];let k=0;
+ $('sol').innerHTML=C.tpl.map(w=>{if(w!=='{}')return `<span>${w}</span>`;const i=k++;return `<span class="slot${bad.includes(i)?' bad':''}" data-i="${i}">${slots[i]||''}</span>`}).join(' ');
+ const used=new Set(slots);
+ $('pool').innerHTML=C.tiles.filter(t=>!used.has(t)).map(t=>`<span class="tile" data-w="${t}">${t}</span>`).join('');
+}
+$('sol').onclick=e=>{const s=e.target.closest('.slot');if(s&&slots[s.dataset.i]){slots[s.dataset.i]=null;bad=[];solve()}};
+$('pool').addEventListener('pointerdown',e=>{
+ const t=e.target.closest('.tile');if(!t)return;e.preventDefault();
+ const g=t.cloneNode(true);g.className='tile ghost';document.body.appendChild(g);
+ let moved=0;const sx=e.clientX,sy=e.clientY;
+ const mv=ev=>{moved=Math.max(moved,Math.hypot(ev.clientX-sx,ev.clientY-sy));g.style.left=ev.clientX+'px';g.style.top=ev.clientY+'px'};
+ mv(e);
+ const up=ev=>{
+  removeEventListener('pointermove',mv);removeEventListener('pointerup',up);removeEventListener('pointercancel',up);g.remove();
+  let i;
+  if(moved<8)i=slots.indexOf(null);
+  else{const s=document.elementFromPoint(ev.clientX,ev.clientY);const sl=s&&s.closest('.slot');i=sl?+sl.dataset.i:-1}
+  if(i>=0){slots[i]=t.dataset.w;bad=[];solve()}
+ };
+ addEventListener('pointermove',mv);addEventListener('pointerup',up);addEventListener('pointercancel',up);
+});
+$('chk').onclick=()=>{
+ const C=CASES[ci];
+ if(slots.includes(null)){$('fb').textContent='Fülle erst alle Lücken.';return}
+ tries++;bad=[];C.ans.forEach((a,i)=>{if(slots[i]!==a)bad.push(i)});solve();
+ if(bad.length){$('fb').textContent='✗ Nicht ganz. Achte auf die Endungen: Wer handelt (Nominativ), was wird geworfen (Akkusativ)?';return}
+ $('fb').textContent='✓ Gelöst in '+tries+' Versuch(en)! '+C.de;
+ $('chk').style.display='none';$('nx').style.display='';$('nx').textContent=ci+1<CASES.length?'Nächster Fall':'Nochmal von vorn';
+};
+$('nx').onclick=()=>{ci=(ci+1)%CASES.length;load()};
+load();
+</script></body></html>
