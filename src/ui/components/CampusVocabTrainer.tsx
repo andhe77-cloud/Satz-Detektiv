@@ -923,7 +923,6 @@ export const CampusVocabTrainer: React.FC<CampusVocabTrainerProps> = ({
               <BureaucracyStage
                 floor={floor}
                 lastMove={lastMove}
-                hasFirstQuestionShield={floor === 1 && runQuestionCount === 0}
                 curseSeed={curseSeed}
                 passierscheinCount={passierscheinCount}
                 modeLabel="Vokabel-Prüfung"
@@ -1082,7 +1081,6 @@ export const CampusVocabTrainer: React.FC<CampusVocabTrainerProps> = ({
               <BureaucracyStage
                 floor={floor}
                 lastMove={lastMove}
-                hasFirstQuestionShield={floor === 1 && runQuestionCount === 0}
                 curseSeed={curseSeed}
                 passierscheinCount={passierscheinCount}
                 modeLabel="Kasus-Prüfung"

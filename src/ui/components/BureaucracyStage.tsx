@@ -20,7 +20,7 @@ const COMIC_CURSES = [
  */
 export const CorneliusWalkerSvg: React.FC<{ mood: HeroMood; className?: string }> = ({
   mood,
-  className = 'w-20 h-32 sm:w-24 sm:h-36',
+  className = 'w-[68px] h-[112px] sm:w-[78px] sm:h-[126px]',
 }) => {
   const isAngry = mood === 'angry' || mood === 'defeat';
   const isHappy = mood === 'happy' || mood === 'victory';
@@ -125,13 +125,41 @@ export const CorneliusWalkerSvg: React.FC<{ mood: HeroMood; className?: string }
       <ellipse cx="37" cy="54" rx="3.8" ry="2" fill="#D97B66" opacity="0.28" />
       <ellipse cx="63" cy="54" rx="3.8" ry="2" fill="#D97B66" opacity="0.28" />
 
-      {/* Golden/Blond Fringe & Detective Cap with Small Comic Wings */}
-      <path d="M18 35 Q50 28 82 35" stroke="#221710" strokeWidth="4" strokeLinecap="round" />
-      <path d="M31 33 Q35 14 50 14 Q65 14 69 33 Z" fill="#4B3728" stroke="#221710" strokeWidth="1.6" />
-      <rect x="32" y="28" width="36" height="4.5" fill="#9B2C2C" />
-      {/* Small white crest wings on cap sides */}
-      <path d="M29 27 Q19 18 22 28 Q26 30 30 30 Z" fill="#FFFDF8" stroke="#221710" strokeWidth="1.2" />
-      <path d="M71 27 Q81 18 78 28 Q74 30 70 30 Z" fill="#FFFDF8" stroke="#221710" strokeWidth="1.2" />
+      {/* Blond Fringe under Winged Helmet */}
+      <path
+        d="M30 37 Q40 31 50 35 Q60 31 70 37 Q62 39 50 38 Q38 39 30 37 Z"
+        fill="#E5B64C"
+        stroke="#221710"
+        strokeWidth="1.2"
+      />
+
+      {/* Rounded Metal Winged Helmet */}
+      <path
+        d="M28 34 Q30 12 50 12 Q70 12 72 34 Z"
+        fill="#BFC8D1"
+        stroke="#221710"
+        strokeWidth="1.7"
+      />
+      {/* Helmet Highlight & Rim */}
+      <path d="M36 22 Q43 15 54 16" stroke="#EBF1F6" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+      <path d="M27 33 Q50 28 73 33" stroke="#7A8692" strokeWidth="4" strokeLinecap="round" fill="none" />
+      <path d="M27 33 Q50 28 73 33" stroke="#221710" strokeWidth="1.3" strokeLinecap="round" fill="none" />
+
+      {/* Prominent White Helmet Wings */}
+      <path
+        d="M28 28 Q9 8 11 23 Q15 29 29 31 Z"
+        fill="#FFFDF8"
+        stroke="#221710"
+        strokeWidth="1.4"
+      />
+      <path d="M16 21 Q21 24 27 27" stroke="#C9B99F" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+      <path
+        d="M72 28 Q91 8 89 23 Q85 29 71 31 Z"
+        fill="#FFFDF8"
+        stroke="#221710"
+        strokeWidth="1.4"
+      />
+      <path d="M84 21 Q79 24 73 27" stroke="#C9B99F" strokeWidth="1.2" strokeLinecap="round" fill="none" />
 
       {/* Eyes & Monocle */}
       <g className={isAngry ? '' : 'animate-witness-blink'}>
@@ -291,7 +319,6 @@ export const MagnusHelperSvg: React.FC<{ mood: HeroMood; className?: string }> =
 interface BureaucracyStageProps {
   floor: number;
   lastMove: 'none' | 'up' | 'down' | 'grace';
-  hasFirstQuestionShield?: boolean;
   curseSeed: number;
   passierscheinCount: number;
   modeLabel: string;
@@ -301,7 +328,6 @@ interface BureaucracyStageProps {
 export const BureaucracyStage: React.FC<BureaucracyStageProps> = ({
   floor,
   lastMove,
-  hasFirstQuestionShield = false,
   curseSeed,
   passierscheinCount,
   modeLabel,
@@ -341,14 +367,6 @@ export const BureaucracyStage: React.FC<BureaucracyStageProps> = ({
 
           <div className="flex items-center gap-2 text-xs text-[#6A5A4C] dark:text-[#B9AA98]">
             <span>{modeLabel}</span>
-            {hasFirstQuestionShield && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span className="font-semibold text-[#1E5B3A] dark:text-[#7CD3A2]">
-                  Erstversuch-Schutz aktiv
-                </span>
-              </>
-            )}
             {passierscheinCount > 0 && (
               <>
                 <span aria-hidden="true">·</span>
