@@ -213,6 +213,19 @@ export interface CaseDefinition {
   };
 }
 
+export interface CareerMetaStats {
+  passierscheineEarned: number;
+  perfectTowers: number;
+  towerGameOvers: number;
+  comebackTowers: number;
+  stolpersteinTowers: number;
+  noJokerMasterCases: number;
+  currentErrorStreak: number;
+  graceSavesCount?: number;
+  floorsClimbedTotal?: number;
+  lastTowerWasGameOver?: boolean;
+}
+
 export interface PlayerProgress {
   solvedCaseIds: Record<string, { stars: number; attempts: number; solvedAt: string }>;
   dailySolvedDates: Record<string, { stars: number; attempts: number }>;
@@ -228,6 +241,7 @@ export interface PlayerProgress {
     caseMasteredCount?: number;
     meaningMasteredCount?: number;
   };
+  careerMeta?: CareerMetaStats;
   settings: {
     theme: 'light' | 'dark';
     reducedMotion: boolean;

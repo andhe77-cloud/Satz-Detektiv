@@ -3,7 +3,7 @@ import { Award, CheckCircle2, Download, Play, RotateCcw, Shuffle, Star } from 'l
 import { StoryChapter } from '../../content/storyCases';
 import { CampusLessonRange, DifficultyStage, GrammarFocus, PlayerProgress } from '../../core/types';
 import { getRecommendedPracticeFocus } from '../../services/spacedRepetition';
-import { BADGES, getCurrentRank } from '../../services/storage';
+import { BADGES, BadgeCategory, TowerEvent, getCurrentRank } from '../../services/storage';
 import { ArchiveStatsDashboard } from './ArchiveStatsDashboard';
 import { CampusVocabTrainer } from './CampusVocabTrainer';
 import { CorneliusAvatarSvg } from './Illustrations';
@@ -241,6 +241,7 @@ export const PracticeView: React.FC<{
   onChangeCampusLessonRange: (range: CampusLessonRange) => void;
   onStartFocusedPractice: (focus: GrammarFocus, stage: DifficultyStage) => void;
   onRecordCampusResult: (cardId: string, correct: boolean, kind: 'meaning' | 'cases') => void;
+  onTowerEvent?: (event: TowerEvent) => void;
   onResetCampusProgress: () => void;
 }> = ({
   progress,
@@ -248,6 +249,7 @@ export const PracticeView: React.FC<{
   onChangeCampusLessonRange,
   onStartFocusedPractice,
   onRecordCampusResult,
+  onTowerEvent,
   onResetCampusProgress,
 }) => {
   const [practiceTab, setPracticeTab] = useState<'grammar' | 'campus'>('grammar');
@@ -307,6 +309,7 @@ export const PracticeView: React.FC<{
           lessonRange={campusLessonRange}
           onChangeLessonRange={onChangeCampusLessonRange}
           onRecordResult={onRecordCampusResult}
+          onTowerEvent={onTowerEvent}
           onResetCampusProgress={onResetCampusProgress}
         />
       ) : (
@@ -376,8 +379,12 @@ export const ArchiveView: React.FC<{
   onStartFirstCase: () => void;
 }> = ({ progress, onResetProgress, onStartFirstCase }) => {
   const [confirmReset, setConfirmReset] = useState(false);
+  const [badgeCategory, setBadgeCategory] = useState<'all' | BadgeCategory>('all');
 
   const rank = getCurrentRank(progress.totalStars);
+  const unlockedCount = BADGES.filter((b) => progress.unlockedBadges.includes(b.id)).length;
+  const visibleBadges =
+    badgeCategory === 'all' ? BADGES : BADGES.filter((b) => b.category === badgeCategory);
 
   const handleExport = () => {
     const blob = new Blob([JSON.stringify(progress, null, 2)], { type: 'application/json' });
@@ -433,21 +440,58 @@ export const ArchiveView: React.FC<{
       {/* Case Statistics Dashboard (Recharts LineChart) */}
       <ArchiveStatsDashboard progress={progress} onStartFirstCase={onStartFirstCase} />
 
-      {/* Badges */}
-      <section className="space-y-3">
-        <h2 className="font-display text-xl font-bold text-[#241C16] dark:text-[#F2ECE1]">
-          Abzeichen
-        </h2>
+      {/* Badges & Long-Term Achievements */}
+      <section className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+          <div>
+            <h2 className="font-display text-xl font-bold text-[#241C16] dark:text-[#F2ECE1]">
+              Achievements &amp; Abzeichen
+            </h2>
+            <p className="text-xs text-[#6A5A4C] dark:text-[#B9AA98] mt-0.5 font-mono-tab">
+              {unlockedCount} von {BADGES.length} freigeschaltet ({Math.round((unlockedCount / BADGES.length) * 100)}%)
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-[#EFE8DA] dark:bg-[#221D19] border border-[#DED4C3] dark:border-[#3A312A]">
+            {(
+              [
+                { id: 'all', label: 'Alle' },
+                { id: 'cases', label: 'Fälle' },
+                { id: 'tower', label: 'Passierschein' },
+                { id: 'vocab', label: 'Wortschatz' },
+                { id: 'chaos', label: 'Verrückt & Geheim' },
+              ] as Array<{ id: 'all' | BadgeCategory; label: string }>
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setBadgeCategory(tab.id)}
+                className={`min-h-[32px] px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  badgeCategory === tab.id
+                    ? 'bg-[#FFFDF8] dark:bg-[#2B241F] text-[#9B2C2C] dark:text-[#E06C65] shadow-sm'
+                    : 'text-[#4A3D33] dark:text-[#B9AA98]'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {BADGES.map((badge) => {
+          {visibleBadges.map((badge) => {
             const unlocked = progress.unlockedBadges.includes(badge.id);
+            const prog = badge.progress ? badge.progress(progress) : null;
+            const progPct = prog ? Math.min(100, Math.round((prog.current / prog.target) * 100)) : 0;
+            const isHiddenSecret = !unlocked && badge.category === 'chaos';
+
             return (
               <div
                 key={badge.id}
                 className={`rounded-2xl border p-4 flex items-start gap-3 ${
                   unlocked
                     ? 'border-[#C89342] bg-[#FFFDF8] dark:bg-[#221D19]'
-                    : 'border-[#DED4C3] dark:border-[#3A312A] bg-[#EFE8DA]/45 dark:bg-[#1B1714] opacity-70'
+                    : 'border-[#DED4C3] dark:border-[#3A312A] bg-[#EFE8DA]/45 dark:bg-[#1B1714] opacity-80'
                 }`}
               >
                 <Award
@@ -456,16 +500,42 @@ export const ArchiveView: React.FC<{
                   }`}
                   aria-hidden="true"
                 />
-                <div>
+                <div className="min-w-0 flex-1 space-y-1.5">
                   <div className="text-sm font-bold text-[#241C16] dark:text-[#F2ECE1]">
-                    {badge.titleDe}
+                    {isHiddenSecret ? '??? (Geheimes Achievement)' : badge.titleDe}
                   </div>
-                  <p className="text-xs text-[#6A5A4C] dark:text-[#B9AA98] mt-0.5">
-                    {badge.descriptionDe}
+                  <p className="text-xs text-[#6A5A4C] dark:text-[#B9AA98] leading-relaxed">
+                    {isHiddenSecret
+                      ? badge.secretHintDe ?? 'Finde im Spiel heraus, was diesen verrückten System-Eintrag auslöst.'
+                      : badge.descriptionDe}
                   </p>
-                  <div className="text-[11px] font-semibold mt-1 text-[#9B2C2C] dark:text-[#E06C65]">
-                    {unlocked ? 'Freigeschaltet' : 'Noch verschlossen'}
-                  </div>
+
+                  {prog && !unlocked && (
+                    <div className="space-y-1 pt-0.5">
+                      <div className="flex justify-between text-[11px] font-mono-tab text-[#6A5A4C] dark:text-[#B9AA98]">
+                        <span>Fortschritt</span>
+                        <span>
+                          {Math.min(prog.current, prog.target)} / {prog.target}
+                        </span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-[#DED4C3] dark:bg-[#2B241F] overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-[#9B2C2C] transition-all"
+                          style={{ width: `${progPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {unlocked ? (
+                    <div className="text-[11px] font-semibold text-[#1E5B3A] dark:text-[#7CD3A2]">
+                      Freigeschaltet · <span className="font-normal">{badge.rewardDe}</span>
+                    </div>
+                  ) : (
+                    <div className="text-[11px] font-semibold text-[#9B2C2C] dark:text-[#E06C65]">
+                      Noch verschlossen
+                    </div>
+                  )}
                 </div>
               </div>
             );

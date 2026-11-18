@@ -21,6 +21,7 @@ interface CaseWorkspaceProps {
     caseId: string;
     stars: number;
     attempts: number;
+    jokersUsed: number;
     grammarTags: GrammarFocus[];
   }) => void;
   onGrammarOutcome: (tags: GrammarFocus[], hadError: boolean) => void;
@@ -230,6 +231,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({
       caseId: caseData.id,
       stars,
       attempts: nextAttempts,
+      jokersUsed,
       grammarTags: caseData.difficultyMetrics.grammarTags,
     });
   };

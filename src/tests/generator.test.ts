@@ -20,7 +20,10 @@ import { GRAMMAR_GLOSSARY, getUnlockedGlossaryCount, isGlossaryEntryUnlocked } f
 import rawLexicon from '../latin/lexicon.json';
 import { validateLexicon } from '../latin/schema';
 import {
+  BADGES,
   applyCampusOutcome,
+  applyCaseSolved,
+  applyTowerEvent,
   createDefaultProgress,
   getCampusCareerStars,
   recordGrammarOutcome,
@@ -297,4 +300,212 @@ describe('Grammar Glossary & Unlock Progression', () => {
     expect(nextWrongOnly?.id).not.toBe('a');
   });
 });
+
+describe('Achievements & Long-Term Progression', () => {
+  it('defines unique badges across all 4 categories including 79 long-term & chaos achievements', () => {
+    const ids = BADGES.map((b) => b.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(BADGES.length).toBe(79);
+
+    const categories = new Set(BADGES.map((b) => b.category));
+    expect(categories).toEqual(new Set(['cases', 'tower', 'vocab', 'chaos']));
+  });
+
+  it('unlocks case mastery, story completion, joker-junkie, daily-ace, grammar-all-7, and clock achievements', () => {
+    const weekdayAfternoon = new Date(2026, 10, 18, 14, 0, 0); // Wednesday 14:00 local
+    const saturdayMidnight = new Date(2026, 10, 21, 1, 30, 0); // Saturday 01:30 local
+    const mondayLunch = new Date(2026, 10, 16, 12, 15, 0); // Monday 12:15 local
+    const mondayMorning = new Date(2026, 10, 16, 6, 30, 0); // Monday 06:30 local
+
+    let p = createDefaultProgress();
+
+    // Stage 4, 1st attempt, 0 jokers -> first-case, perfect-deduction, dative-master, master-of-rome, no-joker-ace
+    const first = applyCaseSolved(
+      p,
+      {
+        caseId: 'gen-s4-1',
+        stars: 3,
+        attempts: 1,
+        jokersUsed: 0,
+        stage: 4,
+        isDaily: false,
+        todayStr: '2026-11-18',
+      },
+      weekdayAfternoon
+    );
+    p = first.nextProgress;
+    expect(first.newlyUnlockedBadges).toEqual(
+      expect.arrayContaining([
+        'first-case',
+        'perfect-deduction',
+        'dative-master',
+        'master-of-rome',
+        'no-joker-ace',
+      ])
+    );
+    expect(p.unlockedBadges).not.toContain('dcc-night-owl');
+    expect(p.unlockedBadges).not.toContain('dcc-weekend-hero');
+
+    // Daily ace (1st attempt, 3 stars, 0 jokers) during lunch
+    const dailyAce = applyCaseSolved(
+      p,
+      {
+        caseId: 'gen-daily-1',
+        stars: 3,
+        attempts: 1,
+        jokersUsed: 0,
+        stage: 2,
+        isDaily: true,
+        todayStr: '2026-11-16',
+      },
+      mondayLunch
+    );
+    p = dailyAce.nextProgress;
+    expect(dailyAce.newlyUnlockedBadges).toEqual(
+      expect.arrayContaining(['daily-sleuth', 'dcc-daily-ace', 'dcc-lunch-break'])
+    );
+
+    // Stubborn case (4+ attempts) + 3 jokers on Saturday at 01:30 -> dcc-stubborn-case, dcc-joker-junkie, dcc-night-owl, dcc-midnight-madness, dcc-weekend-hero
+    const nightSolve = applyCaseSolved(
+      p,
+      {
+        caseId: 'gen-s2-1',
+        stars: 1,
+        attempts: 4,
+        jokersUsed: 3,
+        stage: 2,
+        isDaily: false,
+        todayStr: '2026-11-21',
+      },
+      saturdayMidnight
+    );
+    p = nightSolve.nextProgress;
+    expect(nightSolve.newlyUnlockedBadges).toEqual(
+      expect.arrayContaining([
+        'dcc-stubborn-case',
+        'dcc-joker-junkie',
+        'dcc-night-owl',
+        'dcc-midnight-madness',
+        'dcc-weekend-hero',
+      ])
+    );
+
+    // Unlock all 7 grammar topics + solve all 12 story cases -> grammar-all-7, story-complete, cases-10, perfect-10, dcc-early-bird, dcc-meta-badges-15
+    p = recordGrammarOutcome(
+      p,
+      ['nominative', 'accusative', 'dative', 'ablative', 'negation', 'perfect', 'conjunction'],
+      false
+    );
+    const allStoryCaseIds = getStoryChapters().flatMap((ch) => ch.cases.map((c) => c.id));
+    expect(allStoryCaseIds).toHaveLength(12);
+    for (const storyId of allStoryCaseIds) {
+      p = applyCaseSolved(
+        p,
+        {
+          caseId: storyId,
+          stars: 3,
+          attempts: 1,
+          jokersUsed: 0,
+          stage: 2,
+          isDaily: false,
+          todayStr: '2026-11-16',
+          allStoryCaseIds,
+        },
+        mondayMorning
+      ).nextProgress;
+    }
+    expect(p.unlockedBadges).toContain('grammar-all-7');
+    expect(p.unlockedBadges).toContain('story-complete');
+    expect(p.unlockedBadges).toContain('cases-10');
+    expect(p.unlockedBadges).toContain('dcc-early-bird');
+    expect(p.unlockedBadges).toContain('perfect-10');
+    expect(p.unlockedBadges).toContain('five-stars');
+    expect(p.unlockedBadges).toContain('dcc-meta-badges-15');
+  });
+
+  it('tracks Bureaucracy Tower climbs, near-miss-9 drops, phoenix comebacks, modes, and game overs', () => {
+    let p = createDefaultProgress();
+
+    for (let i = 0; i < 3; i++) {
+      p = applyTowerEvent(p, { type: 'grace_saved' }).nextProgress;
+    }
+    expect(p.unlockedBadges).toContain('dcc-grace-saved');
+    expect(p.unlockedBadges).toContain('dcc-grace-3');
+
+    // Near miss on floor 9 -> dcc-near-miss-9
+    p = applyTowerEvent(p, { type: 'drop', fromFloor: 9, toFloor: 8 }).nextProgress;
+    expect(p.unlockedBadges).toContain('dcc-near-miss-9');
+
+    // Climb 50 floors -> tower-floors-50
+    for (let i = 0; i < 50; i++) {
+      p = applyTowerEvent(p, { type: 'climb' }).nextProgress;
+    }
+    expect(p.unlockedBadges).toContain('tower-floors-50');
+
+    // Game over then immediate victory -> tower-gameover-1 + dcc-phoenix
+    p = applyTowerEvent(p, { type: 'drop', fromFloor: 1, toFloor: 0 }).nextProgress;
+    expect(p.unlockedBadges).toContain('tower-gameover-1');
+    expect(p.careerMeta?.lastTowerWasGameOver).toBe(true);
+
+    p = applyTowerEvent(p, {
+      type: 'victory',
+      hadErrors: false,
+      hadComeback: false,
+      onlyWrongFilter: false,
+      quizMode: 'meaning',
+      quizDirection: 'de-lat',
+    }).nextProgress;
+    expect(p.unlockedBadges).toContain('tower-pass-1');
+    expect(p.unlockedBadges).toContain('tower-perfect');
+    expect(p.unlockedBadges).toContain('tower-de-lat-win');
+    expect(p.unlockedBadges).toContain('dcc-phoenix');
+    expect(p.careerMeta?.lastTowerWasGameOver).toBe(false);
+
+    p = applyTowerEvent(p, {
+      type: 'victory',
+      hadErrors: true,
+      hadComeback: true,
+      onlyWrongFilter: true,
+      quizMode: 'cases',
+    }).nextProgress;
+    expect(p.unlockedBadges).toContain('tower-comeback');
+    expect(p.unlockedBadges).toContain('tower-stolpersteine-win');
+    expect(p.unlockedBadges).toContain('tower-case-win');
+    expect(p.careerMeta?.passierscheineEarned).toBe(2);
+
+    for (let i = 0; i < 4; i++) {
+      p = applyTowerEvent(p, { type: 'game_over' }).nextProgress;
+    }
+    expect(p.careerMeta?.towerGameOvers).toBe(5);
+    expect(p.unlockedBadges).toContain('tower-gameover-5');
+  });
+
+  it('unlocks 5-wrong chaos badge, 25 wrong-pile badge, and 100-streak in Campus training', () => {
+    const weekdayAfternoon = new Date(2026, 10, 18, 15, 0, 0);
+    let p = createDefaultProgress();
+
+    for (let i = 0; i < 5; i++) {
+      p = applyCampusOutcome(p, `w-${i}`, false, 'meaning', weekdayAfternoon).nextProgress;
+    }
+    expect(p.unlockedBadges).toContain('dcc-triple-wrong');
+    expect(p.unlockedBadges).toContain('dcc-five-wrong');
+    expect(p.careerMeta?.currentErrorStreak).toBe(5);
+
+    for (let i = 5; i < 25; i++) {
+      p = applyCampusOutcome(p, `w-${i}`, false, 'meaning', weekdayAfternoon).nextProgress;
+    }
+    expect(p.unlockedBadges).toContain('dcc-wrong-pile-25');
+
+    for (let i = 0; i < 100; i++) {
+      p = applyCampusOutcome(p, `s-${i}`, true, 'meaning', weekdayAfternoon).nextProgress;
+    }
+    expect(p.careerMeta?.currentErrorStreak).toBe(0);
+    expect(p.unlockedBadges).toContain('campus-streak-25');
+    expect(p.unlockedBadges).toContain('campus-streak-50');
+    expect(p.unlockedBadges).toContain('campus-streak-100');
+    expect(p.unlockedBadges).toContain('campus-100');
+    expect(p.unlockedBadges).toContain('campus-practiced-100');
+  });
+});
+
 

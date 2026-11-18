@@ -1,16 +1,22 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { soundEngine } from './audio/soundEngine';
 import { getDailyCase, getStoryChapters } from './content/storyCases';
 import { CampusLessonRange, CaseDefinition, DifficultyStage, GrammarFocus, PlayerProgress } from './core/types';
 import { generateCase } from './generator/caseGenerator';
 import {
+  BADGES,
+  BadgeDefinition,
+  TowerEvent,
   applyCampusOutcome,
+  applyCaseSolved,
+  applyTowerEvent,
   calculateTotalStars,
   loadProgress,
   recordGrammarOutcome,
   resetProgress,
   saveProgress,
 } from './services/storage';
+import { AchievementToast } from './ui/components/AchievementToast';
 import { CaseWorkspace } from './ui/components/CaseWorkspace';
 import { AppView, Header, MobileBottomNav } from './ui/components/Header';
 import { LegalModal, LegalTab } from './ui/components/LegalModal';
@@ -21,6 +27,8 @@ import { GlossaryView } from './ui/components/GlossaryView';
 
 export default function App() {
   const [progress, setProgress] = useState<PlayerProgress>(() => loadProgress());
+  const latestProgressRef = useRef<PlayerProgress>(progress);
+  latestProgressRef.current = progress;
   const [activeView, setActiveView] = useState<AppView>('cases');
   const [activeCase, setActiveCase] = useState<CaseDefinition | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -28,9 +36,24 @@ export default function App() {
     open: false,
     tab: 'privacy',
   });
+  const [achievementQueue, setAchievementQueue] = useState<BadgeDefinition[]>([]);
 
   const chapters = useMemo(() => getStoryChapters(), []);
   const allStoryCases = useMemo(() => chapters.flatMap((ch) => ch.cases), [chapters]);
+  const allStoryCaseIds = useMemo(() => allStoryCases.map((c) => c.id), [allStoryCases]);
+
+  const enqueueBadgeIds = (badgeIds: string[]) => {
+    if (badgeIds.length === 0) return;
+    const defs = badgeIds
+      .map((id) => BADGES.find((b) => b.id === id))
+      .filter((b): b is BadgeDefinition => Boolean(b));
+    if (defs.length === 0) return;
+    setAchievementQueue((prev) => {
+      const seen = new Set(prev.map((b) => b.id));
+      const fresh = defs.filter((d) => !seen.has(d.id));
+      return fresh.length > 0 ? [...prev, ...fresh] : prev;
+    });
+  };
 
   // Sync theme, reduced-motion, and Web Audio settings
   useEffect(() => {
@@ -119,84 +142,72 @@ export default function App() {
     correct: boolean,
     kind: 'meaning' | 'cases' = 'meaning'
   ) => {
-    setProgress((prev) => applyCampusOutcome(prev, cardId, correct, kind).nextProgress);
+    const res = applyCampusOutcome(latestProgressRef.current, cardId, correct, kind);
+    latestProgressRef.current = res.nextProgress;
+    setProgress(res.nextProgress);
+    enqueueBadgeIds(res.newlyUnlockedBadges);
+  };
+
+  const handleTowerEvent = (event: TowerEvent) => {
+    const res = applyTowerEvent(latestProgressRef.current, event);
+    latestProgressRef.current = res.nextProgress;
+    setProgress(res.nextProgress);
+    enqueueBadgeIds(res.newlyUnlockedBadges);
   };
 
   const handleResetCampusProgress = () => {
-    setProgress((prev) => {
-      const emptyCampusStats = {
-        masteredIds: [],
-        wrongIds: [],
-        practicedCount: 0,
-        currentStreak: 0,
-        bestStreak: 0,
-        caseMasteredCount: 0,
-        meaningMasteredCount: 0,
-      };
-      return {
-        ...prev,
+    const prev = latestProgressRef.current;
+    const emptyCampusStats = {
+      masteredIds: [],
+      wrongIds: [],
+      practicedCount: 0,
+      currentStreak: 0,
+      bestStreak: 0,
+      caseMasteredCount: 0,
+      meaningMasteredCount: 0,
+    };
+    const next: PlayerProgress = {
+      ...prev,
+      campusStats: emptyCampusStats,
+      totalStars: calculateTotalStars({
+        solvedCaseIds: prev.solvedCaseIds,
+        dailySolvedDates: prev.dailySolvedDates,
         campusStats: emptyCampusStats,
-        totalStars: calculateTotalStars({
-          solvedCaseIds: prev.solvedCaseIds,
-          dailySolvedDates: prev.dailySolvedDates,
-          campusStats: emptyCampusStats,
-        }),
-      };
-    });
+      }),
+    };
+    latestProgressRef.current = next;
+    setProgress(next);
   };
 
   const handleCaseSolved = (result: {
     caseId: string;
     stars: number;
     attempts: number;
+    jokersUsed: number;
     grammarTags: GrammarFocus[];
   }) => {
-    setProgress((prev) => {
-      const isDaily = activeView === 'daily' || result.caseId.startsWith('gen-') && result.caseId.includes(`daily-${todayStr}`);
-      const nextSolved = { ...prev.solvedCaseIds };
-      const nextDaily = { ...prev.dailySolvedDates };
-
-      if (isDaily) {
-        const prevDaily = nextDaily[todayStr];
-        nextDaily[todayStr] = {
-          stars: Math.max(prevDaily?.stars ?? 0, result.stars),
-          attempts: result.attempts,
-        };
-      } else {
-        const existing = nextSolved[result.caseId];
-        nextSolved[result.caseId] = {
-          stars: Math.max(existing?.stars ?? 0, result.stars),
-          attempts: result.attempts,
-          solvedAt: new Date().toISOString(),
-        };
-      }
-
-      const totalStars = calculateTotalStars({
-        solvedCaseIds: nextSolved,
-        dailySolvedDates: nextDaily,
-        campusStats: prev.campusStats,
-      });
-
-      const badges = new Set(prev.unlockedBadges);
-      badges.add('first-case');
-      if (result.stars === 3) badges.add('perfect-deduction');
-      if (isDaily) badges.add('daily-sleuth');
-      if (activeCase && activeCase.stage >= 3) badges.add('dative-master');
-      if (activeCase && activeCase.stage === 4) badges.add('master-of-rome');
-      if (totalStars >= 10) badges.add('five-stars');
-
-      return {
-        ...prev,
-        solvedCaseIds: nextSolved,
-        dailySolvedDates: nextDaily,
-        totalStars,
-        unlockedBadges: [...badges],
-      };
+    const isDaily =
+      activeView === 'daily' ||
+      (result.caseId.startsWith('gen-') && result.caseId.includes(`daily-${todayStr}`));
+    const res = applyCaseSolved(latestProgressRef.current, {
+      caseId: result.caseId,
+      stars: result.stars,
+      attempts: result.attempts,
+      jokersUsed: result.jokersUsed,
+      stage: activeCase?.stage,
+      isDaily,
+      todayStr,
+      allStoryCaseIds,
     });
+    latestProgressRef.current = res.nextProgress;
+    setProgress(res.nextProgress);
+    enqueueBadgeIds(res.newlyUnlockedBadges);
   };
 
   const handleGrammarOutcome = (tags: GrammarFocus[], hadError: boolean) => {
-    setProgress((prev) => recordGrammarOutcome(prev, tags, hadError));
+    const next = recordGrammarOutcome(latestProgressRef.current, tags, hadError);
+    latestProgressRef.current = next;
+    setProgress(next);
   };
 
   const handleNextCase = () => {
@@ -243,6 +254,7 @@ export default function App() {
             onChangeCampusLessonRange={handleChangeCampusRange}
             onStartFocusedPractice={handleStartFocusedPractice}
             onRecordCampusResult={handleRecordCampusResult}
+            onTowerEvent={handleTowerEvent}
             onResetCampusProgress={handleResetCampusProgress}
           />
         ) : activeView === 'glossary' ? (
@@ -255,7 +267,12 @@ export default function App() {
         ) : activeView === 'archive' ? (
           <ArchiveView
             progress={progress}
-            onResetProgress={() => setProgress(resetProgress())}
+            onResetProgress={() => {
+              const fresh = resetProgress();
+              latestProgressRef.current = fresh;
+              setAchievementQueue([]);
+              setProgress(fresh);
+            }}
             onStartFirstCase={() => setActiveView('cases')}
           />
         ) : (
@@ -316,6 +333,11 @@ export default function App() {
         tab={legalModal.tab}
         onChangeTab={(tab) => setLegalModal((prev) => ({ ...prev, tab }))}
         onClose={() => setLegalModal((prev) => ({ ...prev, open: false }))}
+      />
+
+      <AchievementToast
+        queue={achievementQueue}
+        onDismissCurrent={() => setAchievementQueue((prev) => prev.slice(1))}
       />
 
       <OfflineIndicator />

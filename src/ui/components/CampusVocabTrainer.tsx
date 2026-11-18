@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Award, BookOpen, RotateCcw, Search, Star } from 'lucide-react';
 import { soundEngine } from '../../audio/soundEngine';
 import {
@@ -12,6 +12,7 @@ import { CAMPUS_CARDS } from '../../latin/campusLexicon';
 import { inflectNounSingular } from '../../latin/inflector';
 import {
   BADGES,
+  TowerEvent,
   applyCampusOutcome,
   getCampusCareerStars,
   getNextCampusMilestone,
@@ -28,6 +29,7 @@ interface CampusVocabTrainerProps {
   lessonRange: CampusLessonRange;
   onChangeLessonRange: (range: CampusLessonRange) => void;
   onRecordResult: (cardId: string, correct: boolean, kind: 'meaning' | 'cases') => void;
+  onTowerEvent?: (event: TowerEvent) => void;
   onResetCampusProgress: () => void;
 }
 
@@ -360,6 +362,7 @@ export const CampusVocabTrainer: React.FC<CampusVocabTrainerProps> = ({
   lessonRange,
   onChangeLessonRange,
   onRecordResult,
+  onTowerEvent,
   onResetCampusProgress,
 }) => {
   const [posFilter, setPosFilter] = useState<PosFilter>('all');
@@ -391,6 +394,8 @@ export const CampusVocabTrainer: React.FC<CampusVocabTrainerProps> = ({
   const [curseSeed, setCurseSeed] = useState(0);
   const [passierscheinCount, setPassierscheinCount] = useState(0);
   const [runQuestionCount, setRunQuestionCount] = useState(0);
+  const [runHadErrors, setRunHadErrors] = useState(false);
+  const [runHadComeback, setRunHadComeback] = useState(false);
 
   const masteredSet = useMemo(
     () => new Set(progress.campusStats?.masteredIds ?? []),
@@ -590,18 +595,35 @@ export const CampusVocabTrainer: React.FC<CampusVocabTrainerProps> = ({
       setLastMove('up');
       if (nextFloor === 10) {
         setPassierscheinCount((c) => c + 1);
+        onTowerEvent?.({
+          type: 'victory',
+          hadErrors: runHadErrors,
+          hadComeback: runHadComeback,
+          onlyWrongFilter: onlyWrong,
+          quizMode: 'meaning',
+          quizDirection,
+        });
+      } else {
+        onTowerEvent?.({ type: 'climb' });
       }
       soundEngine.playSolved();
       setSessionStreak((s) => s + 1);
     } else {
+      setRunHadErrors(true);
       const isFirstQuestionBonus = floor === 1 && runQuestionCount === 0;
       if (isFirstQuestionBonus) {
         setFloor(1);
         setLastMove('grace');
+        setRunHadComeback(true);
+        onTowerEvent?.({ type: 'grace_saved' });
       } else {
         const nextFloor = Math.max(0, floor - 1);
         setFloor(nextFloor);
         setLastMove('down');
+        if (nextFloor === 1) {
+          setRunHadComeback(true);
+        }
+        onTowerEvent?.({ type: 'drop', fromFloor: floor, toFloor: nextFloor });
       }
       setCurseSeed((s) => s + 1);
       soundEngine.playError();
@@ -627,18 +649,34 @@ export const CampusVocabTrainer: React.FC<CampusVocabTrainerProps> = ({
       setLastMove('up');
       if (nextFloor === 10) {
         setPassierscheinCount((c) => c + 1);
+        onTowerEvent?.({
+          type: 'victory',
+          hadErrors: runHadErrors,
+          hadComeback: runHadComeback,
+          onlyWrongFilter: onlyWrong,
+          quizMode: 'cases',
+        });
+      } else {
+        onTowerEvent?.({ type: 'climb' });
       }
       soundEngine.playSolved();
       setSessionStreak((s) => s + 1);
     } else {
+      setRunHadErrors(true);
       const isFirstQuestionBonus = floor === 1 && runQuestionCount === 0;
       if (isFirstQuestionBonus) {
         setFloor(1);
         setLastMove('grace');
+        setRunHadComeback(true);
+        onTowerEvent?.({ type: 'grace_saved' });
       } else {
         const nextFloor = Math.max(0, floor - 1);
         setFloor(nextFloor);
         setLastMove('down');
+        if (nextFloor === 1) {
+          setRunHadComeback(true);
+        }
+        onTowerEvent?.({ type: 'drop', fromFloor: floor, toFloor: nextFloor });
       }
       setCurseSeed((s) => s + 1);
       soundEngine.playError();
@@ -656,10 +694,36 @@ export const CampusVocabTrainer: React.FC<CampusVocabTrainerProps> = ({
     setQuestionSeed((n) => n + 1 + Math.floor(Math.random() * 7));
   };
 
+  const isMeaningCorrect =
+    mode === 'meaning' &&
+    selectedAnswer !== null &&
+    currentMeaningQuestion !== null &&
+    selectedAnswer === currentMeaningQuestion.expectedAnswer;
+  const isCaseCorrect =
+    mode === 'cases' &&
+    selectedAnswer !== null &&
+    currentCaseQuestion !== null &&
+    selectedAnswer === currentCaseQuestion.expected;
+  const shouldAutoAdvance = (isMeaningCorrect || isCaseCorrect) && floor > 0 && floor < 10;
+
+  useEffect(() => {
+    if (!shouldAutoAdvance) return;
+    const timer = window.setTimeout(() => {
+      setSelectedAnswer(null);
+      setFrozenCardId(null);
+      setRewardBanner(null);
+      setLastMove('none');
+      setQuestionSeed((n) => n + 1 + Math.floor(Math.random() * 7));
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [shouldAutoAdvance, frozenCardId, questionSeed, mode]);
+
   const handleRestartTower = () => {
     setFloor(1);
     setLastMove('none');
     setRunQuestionCount(0);
+    setRunHadErrors(false);
+    setRunHadComeback(false);
     setSelectedAnswer(null);
     setFrozenCardId(null);
     setRewardBanner(null);
@@ -983,7 +1047,7 @@ export const CampusVocabTrainer: React.FC<CampusVocabTrainerProps> = ({
                   <div className="text-sm">
                     {selectedAnswer === currentMeaningQuestion.expectedAnswer ? (
                       <span className="font-semibold text-[#1E5B3A] dark:text-[#7CD3A2]">
-                        Richtig! Tür öffnet sich – weiter nach oben!
+                        Richtig! Tür öffnet sich – es geht gleich weiter auf Etage {floor} …
                       </span>
                     ) : (
                       <span className="text-[#9B2C2C] dark:text-[#F2918B]">
@@ -1158,7 +1222,9 @@ export const CampusVocabTrainer: React.FC<CampusVocabTrainerProps> = ({
                           : 'text-[#9B2C2C] dark:text-[#F2918B]'
                       }`}
                     >
-                      {selectedAnswer === currentCaseQuestion.expected ? 'Genau richtig!' : 'Falsche Tür!'}
+                      {selectedAnswer === currentCaseQuestion.expected
+                        ? `Genau richtig – weiter auf Etage ${floor} …`
+                        : 'Falsche Tür!'}
                     </span>
                     {getCaseExplanation(currentCaseQuestion.noun, currentCaseQuestion.targetInfo.caseForm)}
                   </div>
@@ -1269,6 +1335,8 @@ export const CampusVocabTrainer: React.FC<CampusVocabTrainerProps> = ({
               setFloor(1);
               setLastMove('none');
               setRunQuestionCount(0);
+              setRunHadErrors(false);
+              setRunHadComeback(false);
               setPassierscheinCount(0);
               onResetCampusProgress();
             }}
