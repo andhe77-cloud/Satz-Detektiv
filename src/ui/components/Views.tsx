@@ -240,7 +240,7 @@ export const PracticeView: React.FC<{
   campusLessonRange: CampusLessonRange;
   onChangeCampusLessonRange: (range: CampusLessonRange) => void;
   onStartFocusedPractice: (focus: GrammarFocus, stage: DifficultyStage) => void;
-  onRecordCampusResult: (cardId: string, correct: boolean) => void;
+  onRecordCampusResult: (cardId: string, correct: boolean, kind: 'meaning' | 'cases') => void;
   onResetCampusProgress: () => void;
 }> = ({
   progress,

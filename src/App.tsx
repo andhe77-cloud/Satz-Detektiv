@@ -3,7 +3,14 @@ import { soundEngine } from './audio/soundEngine';
 import { getDailyCase, getStoryChapters } from './content/storyCases';
 import { CampusLessonRange, CaseDefinition, DifficultyStage, GrammarFocus, PlayerProgress } from './core/types';
 import { generateCase } from './generator/caseGenerator';
-import { recordGrammarOutcome, loadProgress, resetProgress, saveProgress } from './services/storage';
+import {
+  applyCampusOutcome,
+  calculateTotalStars,
+  loadProgress,
+  recordGrammarOutcome,
+  resetProgress,
+  saveProgress,
+} from './services/storage';
 import { CaseWorkspace } from './ui/components/CaseWorkspace';
 import { AppView, Header, MobileBottomNav } from './ui/components/Header';
 import { LegalModal, LegalTab } from './ui/components/LegalModal';
@@ -107,34 +114,35 @@ export default function App() {
     setActiveView('play');
   };
 
-  const handleRecordCampusResult = (cardId: string, correct: boolean) => {
-    setProgress((prev) => {
-      const curr = prev.campusStats ?? { masteredIds: [], wrongIds: [], practicedCount: 0 };
-      const mastered = new Set(curr.masteredIds);
-      const wrong = new Set(curr.wrongIds);
-      if (correct) {
-        mastered.add(cardId);
-        wrong.delete(cardId);
-      } else {
-        wrong.add(cardId);
-        mastered.delete(cardId);
-      }
-      return {
-        ...prev,
-        campusStats: {
-          masteredIds: [...mastered],
-          wrongIds: [...wrong],
-          practicedCount: curr.practicedCount + 1,
-        },
-      };
-    });
+  const handleRecordCampusResult = (
+    cardId: string,
+    correct: boolean,
+    kind: 'meaning' | 'cases' = 'meaning'
+  ) => {
+    setProgress((prev) => applyCampusOutcome(prev, cardId, correct, kind).nextProgress);
   };
 
   const handleResetCampusProgress = () => {
-    setProgress((prev) => ({
-      ...prev,
-      campusStats: { masteredIds: [], wrongIds: [], practicedCount: 0 },
-    }));
+    setProgress((prev) => {
+      const emptyCampusStats = {
+        masteredIds: [],
+        wrongIds: [],
+        practicedCount: 0,
+        currentStreak: 0,
+        bestStreak: 0,
+        caseMasteredCount: 0,
+        meaningMasteredCount: 0,
+      };
+      return {
+        ...prev,
+        campusStats: emptyCampusStats,
+        totalStars: calculateTotalStars({
+          solvedCaseIds: prev.solvedCaseIds,
+          dailySolvedDates: prev.dailySolvedDates,
+          campusStats: emptyCampusStats,
+        }),
+      };
+    });
   };
 
   const handleCaseSolved = (result: {
@@ -163,9 +171,11 @@ export default function App() {
         };
       }
 
-      const totalStars =
-        Object.values(nextSolved).reduce((sum, x) => sum + x.stars, 0) +
-        Object.values(nextDaily).reduce((sum, x) => sum + x.stars, 0);
+      const totalStars = calculateTotalStars({
+        solvedCaseIds: nextSolved,
+        dailySolvedDates: nextDaily,
+        campusStats: prev.campusStats,
+      });
 
       const badges = new Set(prev.unlockedBadges);
       badges.add('first-case');

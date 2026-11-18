@@ -57,9 +57,33 @@
   animation: witness-blink 4.6s ease-in-out infinite;
 }
 
+@keyframes comic-shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  20% { transform: translateX(-5px) rotate(-2deg); }
+  40% { transform: translateX(5px) rotate(2deg); }
+  60% { transform: translateX(-4px) rotate(-1.5deg); }
+  80% { transform: translateX(3px) rotate(1deg); }
+}
+
+@keyframes climb-hop {
+  0% { transform: translateY(8px) scale(0.97); }
+  45% { transform: translateY(-7px) scale(1.03); }
+  100% { transform: translateY(0px) scale(1); }
+}
+
+.animate-comic-shake {
+  animation: comic-shake 0.42s ease-out 1;
+}
+
+.animate-climb-hop {
+  animation: climb-hop 0.45s ease-out 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-witness-breathe,
-  .animate-witness-blink {
+  .animate-witness-blink,
+  .animate-comic-shake,
+  .animate-climb-hop {
     animation: none !important;
   }
   *, *::before, *::after {
@@ -68,7 +92,9 @@
 }
 
 .reduced-motion .animate-witness-breathe,
-.reduced-motion .animate-witness-blink {
+.reduced-motion .animate-witness-blink,
+.reduced-motion .animate-comic-shake,
+.reduced-motion .animate-climb-hop {
   animation: none !important;
 }
 

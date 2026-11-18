@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { getDailyCase, getStoryChapters } from '../content/storyCases';
 import { buildSearchSpace, solveCase } from '../core/solver';
-import { CampusLessonRange, DifficultyStage } from '../core/types';
+import { CampusCard, CampusLessonRange, DifficultyStage } from '../core/types';
 import { generateCase } from '../generator/caseGenerator';
+import { pickNextCampusCard } from '../ui/components/CampusVocabTrainer';
 import {
   CAMPUS_CARDS,
   buildCampusScenarios,
@@ -18,7 +19,12 @@ import {
 import { GRAMMAR_GLOSSARY, getUnlockedGlossaryCount, isGlossaryEntryUnlocked } from '../latin/grammarGlossary';
 import rawLexicon from '../latin/lexicon.json';
 import { validateLexicon } from '../latin/schema';
-import { createDefaultProgress, recordGrammarOutcome } from '../services/storage';
+import {
+  applyCampusOutcome,
+  createDefaultProgress,
+  getCampusCareerStars,
+  recordGrammarOutcome,
+} from '../services/storage';
 
 describe('Latin Lexicon & Inflector', () => {
   it('validates the built-in JSON lexicon schema', () => {
@@ -219,6 +225,76 @@ describe('Grammar Glossary & Unlock Progression', () => {
       expect(isGlossaryEntryUnlocked(progress, focus)).toBe(true);
     }
     expect(getUnlockedGlossaryCount(progress)).toBe(allFocuses.length);
+  });
+
+  it('awards Campus career stars, tracks streaks, and unlocks training achievements', () => {
+    let progress = createDefaultProgress();
+    // 1 wrong answer adds card to wrongIds, then fixing it clears wrongIds
+    progress = applyCampusOutcome(progress, 'c-0', false, 'meaning').nextProgress;
+    expect(progress.campusStats.wrongIds).toEqual(['c-0']);
+
+    for (let i = 0; i < 20; i++) {
+      const kind = i < 15 ? 'cases' : 'meaning';
+      const res = applyCampusOutcome(progress, `c-${i}`, true, kind);
+      progress = res.nextProgress;
+    }
+
+    expect(getCampusCareerStars(progress.campusStats.masteredIds.length)).toBe(1);
+    expect(progress.totalStars).toBe(1);
+    expect(progress.campusStats.bestStreak).toBe(20);
+    expect(progress.unlockedBadges).toContain('campus-first-10');
+    expect(progress.unlockedBadges).toContain('campus-streak-10');
+    expect(progress.unlockedBadges).toContain('campus-case-15');
+    expect(progress.unlockedBadges).toContain('campus-mistakes-cleared');
+  });
+
+  it('defers newly missed Campus cards to the end instead of repeating them immediately', () => {
+    const mkCard = (id: string): CampusCard => ({
+      id,
+      front: id,
+      back: `de-${id}`,
+      band: '1-10',
+      maxLesson: 10,
+      pos: 'noun',
+    });
+    const pool = [mkCard('a'), mkCard('b'), mkCard('c'), mkCard('d')];
+
+    // User just answered 'a' wrong: it is in wrongSet, sessionHistory, and sessionDeferredWrong
+    const afterMissA = pickNextCampusCard({
+      pool,
+      masteredSet: new Set(),
+      wrongSet: new Set(['a']),
+      sessionHistory: ['a'],
+      sessionDeferredWrong: ['a'],
+      onlyWrong: false,
+      seed: 1,
+    });
+    expect(afterMissA?.id).not.toBe('a');
+
+    // User misses 'b' next and masters 'c' and 'd' -> now only deferred cards remain, oldest error ('a') first
+    const endOfSession = pickNextCampusCard({
+      pool,
+      masteredSet: new Set(['c', 'd']),
+      wrongSet: new Set(['a', 'b']),
+      sessionHistory: ['a', 'b', 'c', 'd'],
+      sessionDeferredWrong: ['a', 'b'],
+      onlyWrong: false,
+      seed: 4,
+    });
+    expect(endOfSession?.id).toBe('a');
+
+    // In onlyWrong mode with multiple wrong cards, never repeat the last card back-to-back
+    const wrongOnlyPool = [mkCard('a'), mkCard('b'), mkCard('c')];
+    const nextWrongOnly = pickNextCampusCard({
+      pool: wrongOnlyPool,
+      masteredSet: new Set(),
+      wrongSet: new Set(['a', 'b', 'c']),
+      sessionHistory: ['a'],
+      sessionDeferredWrong: ['a'],
+      onlyWrong: true,
+      seed: 0,
+    });
+    expect(nextWrongOnly?.id).not.toBe('a');
   });
 });
 

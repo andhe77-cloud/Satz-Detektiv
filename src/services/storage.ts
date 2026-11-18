@@ -54,7 +54,57 @@ export const BADGES: BadgeDefinition[] = [
     titleDe: 'Schatzsammler',
     descriptionDe: 'Mindestens 10 Sterne gesammelt.',
   },
+  {
+    id: 'campus-first-10',
+    titleDe: 'Wortschatz-Einstieg',
+    descriptionDe: '10 Campus-Vokabeln sicher beherrscht (+1 Karriere-Stern).',
+  },
+  {
+    id: 'campus-50',
+    titleDe: 'Vokabel-Spürhund',
+    descriptionDe: '50 Campus-Vokabeln sicher beherrscht.',
+  },
+  {
+    id: 'campus-150',
+    titleDe: 'Meister der Wörter',
+    descriptionDe: '150 Campus-Vokabeln sicher beherrscht.',
+  },
+  {
+    id: 'campus-streak-10',
+    titleDe: 'Unbestechliche Serie',
+    descriptionDe: '10 Campus-Aufgaben in Folge fehlerfrei gelöst.',
+  },
+  {
+    id: 'campus-case-15',
+    titleDe: 'Formen-Experte',
+    descriptionDe: '15 Kasus-Formen im Campus-Training gemeistert.',
+  },
+  {
+    id: 'campus-mistakes-cleared',
+    titleDe: 'Stolperstein-Räumer',
+    descriptionDe: 'Mindestens 20 Campus-Aufgaben absolviert und 0 offene Stolpersteine.',
+  },
 ];
+
+export const CAMPUS_STAR_MILESTONES = [10, 25, 50, 100, 200, 350, 500, 750, 1000] as const;
+
+export function getCampusCareerStars(masteredCount: number): number {
+  return CAMPUS_STAR_MILESTONES.filter((m) => masteredCount >= m).length;
+}
+
+export function getNextCampusMilestone(masteredCount: number): number | null {
+  return CAMPUS_STAR_MILESTONES.find((m) => masteredCount < m) ?? null;
+}
+
+export function calculateTotalStars(
+  progress: Pick<PlayerProgress, 'solvedCaseIds' | 'dailySolvedDates' | 'campusStats'>
+): number {
+  const caseStars =
+    Object.values(progress.solvedCaseIds).reduce((sum, x) => sum + x.stars, 0) +
+    Object.values(progress.dailySolvedDates).reduce((sum, x) => sum + x.stars, 0);
+  const campusStars = getCampusCareerStars(progress.campusStats?.masteredIds.length ?? 0);
+  return caseStars + campusStars;
+}
 
 export function createDefaultProgress(): PlayerProgress {
   const prefersDark =
@@ -87,6 +137,10 @@ export function createDefaultProgress(): PlayerProgress {
       masteredIds: [],
       wrongIds: [],
       practicedCount: 0,
+      currentStreak: 0,
+      bestStreak: 0,
+      caseMasteredCount: 0,
+      meaningMasteredCount: 0,
     },
     settings: {
       theme: prefersDark ? 'dark' : 'light',
@@ -187,4 +241,78 @@ export function recordGrammarOutcome(
     };
   }
   return { ...progress, grammarStats: nextStats };
+}
+
+export function applyCampusOutcome(
+  prev: PlayerProgress,
+  cardId: string,
+  correct: boolean,
+  kind: 'meaning' | 'cases' = 'meaning'
+): { nextProgress: PlayerProgress; newlyUnlockedBadges: string[]; earnedBonusStar: boolean } {
+  const curr = prev.campusStats ?? {
+    masteredIds: [],
+    wrongIds: [],
+    practicedCount: 0,
+    currentStreak: 0,
+    bestStreak: 0,
+    caseMasteredCount: 0,
+    meaningMasteredCount: 0,
+  };
+  const mastered = new Set(curr.masteredIds);
+  const wrong = new Set(curr.wrongIds);
+  if (correct) {
+    mastered.add(cardId);
+    wrong.delete(cardId);
+  } else {
+    wrong.add(cardId);
+    mastered.delete(cardId);
+  }
+
+  const prevCampusStars = getCampusCareerStars(curr.masteredIds.length);
+  const nextCampusStars = getCampusCareerStars(mastered.size);
+  const earnedBonusStar = nextCampusStars > prevCampusStars;
+
+  const nextStreak = correct ? (curr.currentStreak ?? 0) + 1 : 0;
+  const nextBestStreak = Math.max(curr.bestStreak ?? 0, nextStreak);
+  const nextPracticed = curr.practicedCount + 1;
+  const nextCaseMastered = (curr.caseMasteredCount ?? 0) + (correct && kind === 'cases' ? 1 : 0);
+  const nextMeaningMastered = (curr.meaningMasteredCount ?? 0) + (correct && kind === 'meaning' ? 1 : 0);
+
+  const nextCampusStats: PlayerProgress['campusStats'] = {
+    masteredIds: [...mastered],
+    wrongIds: [...wrong],
+    practicedCount: nextPracticed,
+    currentStreak: nextStreak,
+    bestStreak: nextBestStreak,
+    caseMasteredCount: nextCaseMastered,
+    meaningMasteredCount: nextMeaningMastered,
+  };
+
+  const totalStars = calculateTotalStars({
+    solvedCaseIds: prev.solvedCaseIds,
+    dailySolvedDates: prev.dailySolvedDates,
+    campusStats: nextCampusStats,
+  });
+
+  const badges = new Set(prev.unlockedBadges);
+  if (totalStars >= 10) badges.add('five-stars');
+  if (mastered.size >= 10) badges.add('campus-first-10');
+  if (mastered.size >= 50) badges.add('campus-50');
+  if (mastered.size >= 150) badges.add('campus-150');
+  if (nextBestStreak >= 10) badges.add('campus-streak-10');
+  if (nextCaseMastered >= 15) badges.add('campus-case-15');
+  if (nextPracticed >= 20 && wrong.size === 0) badges.add('campus-mistakes-cleared');
+
+  const newlyUnlockedBadges = [...badges].filter((b) => !prev.unlockedBadges.includes(b));
+
+  return {
+    nextProgress: {
+      ...prev,
+      campusStats: nextCampusStats,
+      totalStars,
+      unlockedBadges: [...badges],
+    },
+    newlyUnlockedBadges,
+    earnedBonusStar,
+  };
 }

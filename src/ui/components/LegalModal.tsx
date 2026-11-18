@@ -21,7 +21,7 @@ export const LegalModal: React.FC<{
       <div className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl bg-[#FFFDF8] dark:bg-[#221D19] border border-[#DED4C3] dark:border-[#3A312A] p-6 shadow-2xl">
         <div className="flex items-center justify-between gap-4 border-b border-[#DED4C3] dark:border-[#3A312A] pb-3">
           <h2 id="legal-title" className="font-display text-xl font-semibold text-[#241C16] dark:text-[#F2ECE1]">
-            {tab === 'privacy' ? 'Datenschutzerklärung (Vorlage)' : 'Impressum (Vorlage)'}
+            {tab === 'privacy' ? 'Datenschutzerklärung' : 'Impressum'}
           </h2>
           <button
             type="button"
@@ -76,24 +76,30 @@ export const LegalModal: React.FC<{
                 Speicherstand jederzeit als JSON-Datei exportieren oder vollständig löschen.
               </p>
               <p className="text-xs text-[#7A695A] dark:text-[#A49483]">
-                Hinweis: Diese Seite ist eine rechtliche Platzhalter-Vorlage und wird vor Veröffentlichung vom
-                Betreiber / Auftraggeber mit den konkreten Kontaktdaten ergänzt.
+                Verantwortlicher Ansprechpartner gemäß DSGVO: Andre Hieke (Kontaktdaten siehe Impressum). Es findet
+                keine Übermittlung personenbezogener Nutzungsdaten an Server des Betreibers statt.
               </p>
             </>
           ) : (
             <>
               <p>
-                <strong>Angaben gemäß § 5 DDG (Platzhalter für Auftraggeber):</strong>
+                <strong>Angaben gemäß § 5 DDG:</strong>
               </p>
               <p>
-                [Name / Organisation des Betreibers]<br />
-                [Straße und Hausnummer]<br />
-                [PLZ und Ort, Deutschland]<br />
-                E-Mail: [kontakt@beispiel.de]
+                Andre Hieke<br />
+                Fronmüller Str. 54<br />
+                90763 Fürth, Deutschland<br />
+                E-Mail:{' '}
+                <a
+                  href="mailto:andre.hieke@gmail.com"
+                  className="underline hover:text-[#9B2C2C] dark:hover:text-[#E06C65]"
+                >
+                  andre.hieke@gmail.com
+                </a>
               </p>
               <p className="text-xs text-[#7A695A] dark:text-[#A49483]">
-                Alle Illustrationen, Spieltexte und die prozedurale Rätsel-Engine wurden speziell für Satz-Detektiv
-                erstellt (Details in <code>CREDITS.md</code>).
+                Privates, nicht-kommerzielles Lernprojekt für den Lateinunterricht. Alle Illustrationen, Spieltexte
+                und die prozedurale Rätsel-Engine wurden speziell für Satz-Detektiv erstellt.
               </p>
             </>
           )}

@@ -223,6 +223,10 @@ export interface PlayerProgress {
     masteredIds: string[];
     wrongIds: string[];
     practicedCount: number;
+    currentStreak?: number;
+    bestStreak?: number;
+    caseMasteredCount?: number;
+    meaningMasteredCount?: number;
   };
   settings: {
     theme: 'light' | 'dark';
